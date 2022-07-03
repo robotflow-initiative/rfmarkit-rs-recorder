@@ -1,4 +1,8 @@
 realsense_data
+dist
+build
 
 *.pyc
 *.vscode
+*.egg-info
+
