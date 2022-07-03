@@ -1,1 +1,4 @@
+realsense_data
+
 *.pyc
+*.vscode
