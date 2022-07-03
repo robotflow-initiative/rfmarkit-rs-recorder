@@ -174,32 +174,27 @@ def enumerate_connected_devices(context):
 
 def main():
     parser = argparse.ArgumentParser(description='Recorder')
-    parser.add_argument('--device', type=str, choices=['L500', 'L400', 'all'], help='whether to use L515 camera')
-    parser.add_argument('--tag', type=str, help='the save tag')
-    parser.add_argument('--idx', type=int, help='the index of the cam')
+    parser.add_argument('--device', type=str, choices=['L500', 'D400', 'all'], help='The cameras to use, seperated by comma e.g. "L500,D400"', default='all')
+    parser.add_argument('--tag', type=str, help='The save tag', default='default')
+    parser.add_argument('--idx', type=int, help='The index of the cam', default='0')
+    parser.add_argument('--base_dir', type=str, help='The path to save frames', default='./realsense_data')
     args = parser.parse_args()
 
     # >>>>>> 3RDPARTY SYNC
-    BASE_PATH = r"C:\Users\imtan\data"
+    BASE_DIR = args.base_dir
     # subpath = args.tag + '-' + str(uuid.uuid1()).split('-')[0] + '-' + datetime.now().strftime("%Y-%m-%d_%H%M%S")
     subpath = args.tag
+    save_path = osp.join(BASE_DIR, subpath)
     # <<<<<<
 
     context = rs.context()
     available_devices = enumerate_connected_devices(context)
-    valid_devices = []
-    for device in available_devices:
-        if device[1] == 'L500' and args.device == 'L500':
-            valid_devices.append(device)
-        elif device[1] != 'L500' and args.device == 'L400':
-            valid_devices.append(device)
-        elif args.device == 'all':
-            valid_devices.append(device)
-
+    if args.device == 'all':
+        valid_devices = available_devices
+    else:
+        valid_devices = list(filter(lambda x: x[1] in args.device.split(','), available_devices))
     device = valid_devices[int(args.idx)]
-
-    print('Find {} valid {} devices!'.format(len(valid_devices), args.device))
-    save_path = osp.join(BASE_PATH, subpath)
+    print('Find {} valid {} devices, using the {}-th device'.format(len(valid_devices), args.device, args.idx))
 
     device_save_path = osp.join(save_path, device[0])
     if not os.path.lexists(osp.join(device_save_path, 'color')):
