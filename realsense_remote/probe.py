@@ -60,7 +60,7 @@ def main():
     port = 5050
     for tag in device_by_type.keys():
         for idx in range(len(device_by_type[tag])):
-            print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port}")
+            print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port} >> realsense_{tag}_{idx}.log 2>&1 & ")
             port += 1
 
 if __name__ == '__main__':
