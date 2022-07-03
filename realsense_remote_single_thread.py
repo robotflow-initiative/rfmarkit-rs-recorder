@@ -1,32 +1,21 @@
 import json
 import logging
 import multiprocessing as mp
-import os
-import platform
 import signal
 import sys
 import time
 from typing import List, Union, Dict
-import threading
 import argparse
-import pyrealsense2 as rs
-import numpy as np
-import cv2
 import os
 import os.path as osp
-import time
-import queue
 import json
 
-from datetime import datetime
-
-import uuid
+import pyrealsense2 as rs
+import cv2
 from tqdm import tqdm
-
 import numpy as np
 import tqdm
 from flask import Flask, request, Response
-import imageio
 from gevent import pywsgi
 
 app = Flask(__name__)
