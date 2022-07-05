@@ -3,6 +3,10 @@ from setuptools import setup, find_packages
 requirements = [
     'flask',
     'gevent',
+    'pyrealsense2',
+    'opencv-python',
+    'tqdm',
+    'numpy',
 ]
 
 setup(
