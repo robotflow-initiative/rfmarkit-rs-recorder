@@ -10,7 +10,7 @@ requirements = [
 ]
 
 setup(
-    name="tcpbroker",
+    name="realsense_remote",
     version="1.3",
     author="davidliyutong",
     author_email="davidliyutong@sjtu.edu.cn",
