@@ -1,25 +1,5 @@
-import enum
-import json
-import logging
-import multiprocessing as mp
-from multiprocessing import context
-import signal
-import sys
-import time
-from typing import List, Union, Dict
-import argparse
-import os
-import os.path as osp
-import json
-
 import pyrealsense2 as rs
-import cv2
-from tqdm import tqdm
-import numpy as np
-import tqdm
-from flask import Flask, request, Response
-from gevent import pywsgi
-
+import argparse
 
 def enumerate_connected_devices(context):
     """
@@ -57,11 +37,14 @@ def main():
     # for tag in device_by_type.keys():
     #     print(f"There are {len(device_by_type[tag])} {tag} devices connected to your system")
     
-    port = 5050
+    port = args.port
     for tag in device_by_type.keys():
         for idx in range(len(device_by_type[tag])):
-            print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port} >> realsense_{tag}_{idx}.log 2>&1 & ")
+            print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port} 2>&1 & ")
             port += 1
 
 if __name__ == '__main__':
-    main()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--port", type=int, help="Starting port number, default is 5050", default=5050)
+    args = parser.parse_args()
+    main(args)
