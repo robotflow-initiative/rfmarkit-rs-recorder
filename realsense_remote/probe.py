@@ -26,7 +26,7 @@ def enumerate_connected_devices(context):
             connect_device.append(device_info)
     return connect_device
 
-def main():
+def main(args):
     EXEC_STRING = "python -m realsense_remote.main"
     context = rs.context()
     available_devices = enumerate_connected_devices(context)
