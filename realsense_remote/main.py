@@ -30,6 +30,7 @@ SAVE_PATH_BASE: str = None
 
 # if using D435
 # depth_scale = 0.001
+SAVE_BAG = True
 USE_DEPTH = True
 SHOW_DEPTH = True
 SHOW_FRAMES = False
@@ -102,7 +103,8 @@ def make_response(status, msg="", **kwargs):
 def capture_frames(device_idx,
                    stop_ev: mp.Event,
                    finish_ev: mp.Event,
-                   save_path_tagged: str):
+                   save_path_tagged: str,
+                   save_bag: bool):
 
     # Initialize parameters
     context = rs.context()
@@ -112,8 +114,11 @@ def capture_frames(device_idx,
     else:
         valid_devices = list(filter(lambda x: x[1] in args.device.split(','), available_devices))
     device = valid_devices[device_idx]
+    
+    device_serial = device[0]
+    product_line = device[1]
 
-    device_save_path = osp.join(save_path_tagged, device[0])
+    device_save_path = osp.join(save_path_tagged, device_serial)
     if not os.path.lexists(osp.join(device_save_path, 'color')):
         os.makedirs(osp.join(device_save_path, 'color'))
     if not os.path.lexists(osp.join(device_save_path, 'depth')):
@@ -121,19 +126,22 @@ def capture_frames(device_idx,
     # Configure depth and color streams
     pipeline = rs.pipeline()
 
-    device_serial = device[0]
-    product_line = device[1]
 
     if product_line == "L500":
         using_L515 = True
         # Enable L515 device
         L515_rs_config.enable_device(device_serial)
+        if save_bag:
+            L515_rs_config.enable_record_to_file(osp.join(device_save_path, f'recording_{time.time()}.bag'))
         # dev.first_depth_sensor().set_option(rs.option.inter_cam_sync_mode, 1 if is_master else 0)
         pipeline_profile = pipeline.start(L515_rs_config)
     else:
         # Enable D400 device
         using_L515 = False
         D400_rs_config.enable_device(device_serial)
+        if save_bag:
+            D400_rs_config.enable_record_to_file(osp.join(device_save_path, f'recording_{time.time()}.bag'))
+
         pipeline_profile = pipeline.start(D400_rs_config)
 
     # set preset
@@ -178,37 +186,41 @@ def capture_frames(device_idx,
         with tqdm.tqdm(ncols=0) as pbar:
             while True:
                 # Wait for a coherent pair of frames: depth and color
-                frames = pipeline.wait_for_frames()
-                aligned_frames = align.process(frames)
-                # depth_frame_org = frames.get_depth_frame()
-                if USE_DEPTH:
-                    depth_frame = aligned_frames.get_depth_frame()
-                color_frame = aligned_frames.get_color_frame()
+                if save_bag:
+                    pipeline.wait_for_frames()  # we don't have to do anything!
+                else:
+                    frames = pipeline.wait_for_frames()
+                    
+                    aligned_frames = align.process(frames)
+                    # depth_frame_org = frames.get_depth_frame()
+                    if USE_DEPTH:
+                        depth_frame = aligned_frames.get_depth_frame()
+                    color_frame = aligned_frames.get_color_frame()
 
-                if not color_frame:
-                    continue
+                    if not color_frame:
+                        continue
 
-                color_image = np.asanyarray(color_frame.get_data())
+                    color_image = np.asanyarray(color_frame.get_data())
 
-                if USE_DEPTH and SHOW_DEPTH:
-                    depth_image = np.asanyarray(depth_frame.get_data())
-                    colorized_depth = np.asanyarray(colorizer.colorize(depth_frame).get_data())
-
-                # Show images
-                if SHOW_FRAMES:
-                    cv2.namedWindow('RealSense_{}'.format(device[0]), cv2.WINDOW_AUTOSIZE)
-                    # images = np.hstack((color_image, colorized_depth))
                     if USE_DEPTH and SHOW_DEPTH:
-                        mix = cv2.addWeighted(color_image, 0.5, colorized_depth, 0.5, 0)
-                    else:
-                        mix = color_image
-                    cv2.imshow('RealSense_{}'.format(device[0]), mix)
-                    cv2.waitKey(1)
+                        depth_image = np.asanyarray(depth_frame.get_data())
+                        colorized_depth = np.asanyarray(colorizer.colorize(depth_frame).get_data())
 
-                ts = time.time()
-                cv2.imwrite(osp.join(device_save_path, 'color', f'{n_frames}_{ts}.bmp'), color_image)
-                # cv2.imwrite(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-                np.save(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.npy'), depth_image)
+                    # Show images
+                    if SHOW_FRAMES:
+                        cv2.namedWindow('RealSense_{}'.format(device[0]), cv2.WINDOW_AUTOSIZE)
+                        # images = np.hstack((color_image, colorized_depth))
+                        if USE_DEPTH and SHOW_DEPTH:
+                            mix = cv2.addWeighted(color_image, 0.5, colorized_depth, 0.5, 0)
+                        else:
+                            mix = color_image
+                        cv2.imshow('RealSense_{}'.format(device[0]), mix)
+                        cv2.waitKey(1)
+
+                    ts = time.time()
+                    cv2.imwrite(osp.join(device_save_path, 'color', f'{n_frames}_{ts}.bmp'), color_image)
+                    # cv2.imwrite(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+                    np.save(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.npy'), depth_image)
 
                 n_frames += 1
                 pbar.update(1)
@@ -219,7 +231,7 @@ def capture_frames(device_idx,
                     finish_ev.set()
                     break
     except Exception as e:
-        raise(e)
+        # raise(e)
         print(f"[Recorder]:  SN={device.SN} got Exception {e}")
         pipeline.stop()
         finish_ev.set()
@@ -233,7 +245,7 @@ def index():
 
 @app.route("/start", methods=['POST', 'GET'])
 def start_record():
-    global CAPTURE_PROCS, STOP_EV, FINISH_EV, SAVE_PATH_BASE, DEVICE_IDX
+    global CAPTURE_PROCS, STOP_EV, FINISH_EV, SAVE_PATH_BASE, DEVICE_IDX, SAVE_BAG
 
     # Wait until last capture ends
     if len(CAPTURE_PROCS) > 0:
@@ -268,7 +280,8 @@ def start_record():
                                         args=(DEVICE_IDX,
                                               STOP_EV,
                                               FINISH_EV,
-                                              save_path_tagged))]
+                                              save_path_tagged,
+                                              SAVE_BAG))]
             DELAY_S = 2  # Magic delay duration to avoid U3V communication error
             [(proc.start(), time.sleep(DELAY_S
                                        )) for proc in CAPTURE_PROCS]
