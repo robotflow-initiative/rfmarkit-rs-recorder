@@ -26,6 +26,7 @@ FINISH_EV: mp.Event = mp.Event()
 CAPTURE_PROCS: List[mp.Process] = []
 DEVICE_IDX = None
 SAVE_PATH_BASE: str = None
+DEVICE_TYPE: str = None  # L500 or D400
 
 
 # if using D435
@@ -34,6 +35,7 @@ SAVE_BAG = True
 USE_DEPTH = True
 SHOW_DEPTH = True
 SHOW_FRAMES = False
+USE_L515_IMU = True
 
 # L500
 L515_depth_resolution_width = 1024  # pixels, or 640
@@ -58,6 +60,9 @@ if USE_DEPTH:
                                  L515_depth_frame_rate)
 L515_rs_config.enable_stream(rs.stream.color, L515_color_resolution_width, L515_color_resolution_height, rs.format.bgr8,
                              L515_color_frame_rate)
+if USE_L515_IMU:
+    L515_rs_config.enable_stream(rs.stream.accel)
+    L515_rs_config.enable_stream(rs.stream.gyro)
 
 D400_rs_config = rs.config()
 if USE_DEPTH:
@@ -101,6 +106,7 @@ def make_response(status, msg="", **kwargs):
 
 
 def capture_frames(device_idx,
+                   device_type,
                    stop_ev: mp.Event,
                    finish_ev: mp.Event,
                    save_path_tagged: str,
@@ -109,11 +115,13 @@ def capture_frames(device_idx,
     # Initialize parameters
     context = rs.context()
     available_devices = enumerate_connected_devices(context)
-    if args.device == 'all':
+    if device_type == 'all':
         valid_devices = available_devices
     else:
-        valid_devices = list(filter(lambda x: x[1] in args.device.split(','), available_devices))
+        print(device_type, available_devices)
+        valid_devices = list(filter(lambda x: x[1] in device_type.split(','), available_devices))
     device = valid_devices[device_idx]
+    print(device)
     
     device_serial = device[0]
     product_line = device[1]
@@ -232,7 +240,7 @@ def capture_frames(device_idx,
                     break
     except Exception as e:
         # raise(e)
-        print(f"[Recorder]:  SN={device.SN} got Exception {e}")
+        print(f"[Recorder]:  SN={device[0]} got Exception {e}")
         pipeline.stop()
         finish_ev.set()
         return
@@ -245,7 +253,7 @@ def index():
 
 @app.route("/start", methods=['POST', 'GET'])
 def start_record():
-    global CAPTURE_PROCS, STOP_EV, FINISH_EV, SAVE_PATH_BASE, DEVICE_IDX, SAVE_BAG
+    global CAPTURE_PROCS, STOP_EV, FINISH_EV, SAVE_PATH_BASE, DEVICE_IDX, SAVE_BAG, DEVICE_TYPE
 
     # Wait until last capture ends
     if len(CAPTURE_PROCS) > 0:
@@ -278,6 +286,7 @@ def start_record():
         if len(CAPTURE_PROCS) <= 0:
             CAPTURE_PROCS = [mp.Process(target=capture_frames,
                                         args=(DEVICE_IDX,
+                                              DEVICE_TYPE,
                                               STOP_EV,
                                               FINISH_EV,
                                               save_path_tagged,
@@ -330,11 +339,12 @@ def quit():
 
 
 def main(args=None):
-    global SAVE_PATH_BASE, DEVICE_IDX
+    global SAVE_PATH_BASE, DEVICE_IDX, DEVICE_TYPE
 
     # Register global parameters
     SAVE_PATH_BASE = args.base_dir
     DEVICE_IDX = args.idx
+    DEVICE_TYPE = args.device
 
     # Prepare system
     logging.info('Using the {}-th {} device'.format(args.idx, args.device))
@@ -354,7 +364,7 @@ if __name__ == '__main__':
     # Parse Arguments
     parser = argparse.ArgumentParser(description='Recorder')
     parser.add_argument('--device', type=str, choices=['L500', 'D400', 'all'], help='The cameras to use, seperated by comma e.g. "L500,D400"', default='all')
-    parser.add_argument('--idx', type=int, help='The index of the cam', default='0')
+    parser.add_argument('--idx', type=int, help='The index of the cam (relative to its device type)', default='0')
     parser.add_argument('--base_dir', type=str, help='The path to save frames', default='./realsense_data')
     parser.add_argument('--port', type=int, help="Port to listen", default=5050)
     args = parser.parse_args()

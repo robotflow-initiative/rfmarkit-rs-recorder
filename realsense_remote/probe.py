@@ -1,5 +1,7 @@
 import pyrealsense2 as rs
 import argparse
+import json
+import os
 
 def enumerate_connected_devices(context):
     """
@@ -26,6 +28,18 @@ def enumerate_connected_devices(context):
             connect_device.append(device_info)
     return connect_device
 
+def get_base_dir(path: str) -> str:
+    DEFAULT_BASE_DIR: str = "./realsense_data"
+    if os.path.exists(path):
+        try:
+            tmp = json.load(open(path, 'r'))
+            assert 'realsense_data_dir' in tmp.keys()
+            return tmp['realsense_data_dir']
+        except:
+            return DEFAULT_BASE_DIR
+    return DEFAULT_BASE_DIR
+    
+    
 def main(args):
     EXEC_STRING = "python -m realsense_remote.main"
     context = rs.context()
@@ -38,13 +52,18 @@ def main(args):
     #     print(f"There are {len(device_by_type[tag])} {tag} devices connected to your system")
     
     port = args.port
-    for tag in device_by_type.keys():
-        for idx in range(len(device_by_type[tag])):
-            print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port} 2>&1 & ")
-            port += 1
+    base_dir = get_base_dir(args.config)
+    if len(device_by_type) > 0:
+        for tag in device_by_type.keys():
+            for idx in range(len(device_by_type[tag])):
+                print(f"{EXEC_STRING} --device={tag} --idx={idx} --port={port} --base_dir={base_dir} 2>&1 & ") # TODO: --base_dir
+                port += 1
+    else:
+        print("realsense camera not found")
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--port", type=int, help="Starting port number, default is 5050", default=5050)
+    parser.add_argument('--config', type=str, default='./config.json')
     args = parser.parse_args()
     main(args)
