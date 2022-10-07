@@ -31,11 +31,11 @@ DEVICE_TYPE: str = None  # L500 or D400
 
 # if using D435
 # depth_scale = 0.001
-SAVE_BAG = True
+SHOW_DEPTH = None
+SHOW_FRAMES = None
+SAVE_BAG = False
 USE_DEPTH = True
-SHOW_DEPTH = True
-SHOW_FRAMES = False
-USE_L515_IMU = True
+USE_L515_IMU = False
 
 # L500
 L515_depth_resolution_width = 1024  # pixels, or 640
@@ -196,8 +196,10 @@ def capture_frames(device_idx,
                 # Wait for a coherent pair of frames: depth and color
                 if save_bag:
                     pipeline.wait_for_frames()  # we don't have to do anything!
+                    tic = time.time()
                 else:
                     frames = pipeline.wait_for_frames()
+                    tic = time.time()
                     
                     aligned_frames = align.process(frames)
                     # depth_frame_org = frames.get_depth_frame()
@@ -210,27 +212,30 @@ def capture_frames(device_idx,
 
                     color_image = np.asanyarray(color_frame.get_data())
 
-                    if USE_DEPTH and SHOW_DEPTH:
+                    if USE_DEPTH:
                         depth_image = np.asanyarray(depth_frame.get_data())
-                        colorized_depth = np.asanyarray(colorizer.colorize(depth_frame).get_data())
 
                     # Show images
                     if SHOW_FRAMES:
                         cv2.namedWindow('RealSense_{}'.format(device[0]), cv2.WINDOW_AUTOSIZE)
                         # images = np.hstack((color_image, colorized_depth))
                         if USE_DEPTH and SHOW_DEPTH:
+                            colorized_depth = np.asanyarray(colorizer.colorize(depth_frame).get_data())
                             mix = cv2.addWeighted(color_image, 0.5, colorized_depth, 0.5, 0)
                         else:
                             mix = color_image
                         cv2.imshow('RealSense_{}'.format(device[0]), mix)
                         cv2.waitKey(1)
 
-                    ts = time.time()
-                    cv2.imwrite(osp.join(device_save_path, 'color', f'{n_frames}_{ts}.bmp'), color_image)
-                    # cv2.imwrite(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
-                    np.save(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}.npy'), depth_image)
+                    ts = frames.get_frame_metadata(rs.frame_metadata_value.time_of_arrival)
+                    sys_ts = time.time()
+                    cv2.imwrite(osp.join(device_save_path, 'color', f'{n_frames}_{ts}_{sys_ts}.bmp'), color_image)
+                    # cv2.imwrite(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}_{sys_ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0])
+                    np.save(osp.join(device_save_path, 'depth', f'{n_frames}_{ts}_{sys_ts}.npy'), depth_image)
 
+                toc = time.time()
                 n_frames += 1
+                pbar.set_description(f'ProcessTime={int((toc-tic)*1000)}(ms)')
                 pbar.update(1)
 
                 if stop_ev.is_set():
@@ -339,12 +344,14 @@ def quit():
 
 
 def main(args=None):
-    global SAVE_PATH_BASE, DEVICE_IDX, DEVICE_TYPE
+    global SAVE_PATH_BASE, DEVICE_IDX, DEVICE_TYPE, SHOW_DEPTH, SHOW_FRAMES
 
     # Register global parameters
     SAVE_PATH_BASE = args.base_dir
     DEVICE_IDX = args.idx
     DEVICE_TYPE = args.device
+    SHOW_FRAMES = args.show_frames == 1
+    SHOW_DEPTH = args.show_depth == 1
 
     # Prepare system
     logging.info('Using the {}-th {} device'.format(args.idx, args.device))
@@ -367,5 +374,7 @@ if __name__ == '__main__':
     parser.add_argument('--idx', type=int, help='The index of the cam (relative to its device type)', default='0')
     parser.add_argument('--base_dir', type=str, help='The path to save frames', default='./realsense_data')
     parser.add_argument('--port', type=int, help="Port to listen", default=5050)
+    parser.add_argument('--show_depth', type=int, help="Toggle depth (0|1)", default=0)
+    parser.add_argument('--show_frames', type=int, help="Toggle display (0|1)", default=0)
     args = parser.parse_args()
     main(args)
