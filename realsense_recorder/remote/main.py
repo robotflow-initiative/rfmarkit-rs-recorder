@@ -1,22 +1,23 @@
+import argparse
 import json
 import logging
 import multiprocessing as mp
+import os
+import os.path as osp
 import signal
 import sys
 import time
-from typing import List, Union, Dict
-import argparse
-import os
-import os.path as osp
-import json
+from typing import List
 
-import pyrealsense2 as rs
 import cv2
-from tqdm import tqdm
 import numpy as np
+import pyrealsense2 as rs
 import tqdm
 from flask import Flask, request, Response
 from gevent import pywsgi
+from tqdm import tqdm
+
+from realsense_recorder.common import enumerate_connected_devices
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -27,7 +28,6 @@ CAPTURE_PROCS: List[mp.Process] = []
 DEVICE_IDX = None
 SAVE_PATH_BASE: str = None
 DEVICE_TYPE: str = None  # L500 or D400
-
 
 # if using D435
 # depth_scale = 0.001
@@ -71,31 +71,6 @@ if USE_DEPTH:
 D400_rs_config.enable_stream(rs.stream.color, color_resolution_width, color_resolution_height, rs.format.bgr8,
                              D435_frame_rate)
 
-def enumerate_connected_devices(context):
-    """
-    Enumerate the connected Intel RealSense devices
-
-    Parameters:
-    -----------
-    context 	   : rs.context()
-                     The context created for using the realsense library
-
-    Return:
-    -----------
-    connect_device : array
-                     Array of (serial, product-line) tuples of devices which are connected to the PC
-
-    """
-    connect_device = []
-
-    for d in context.devices:
-        if d.get_info(rs.camera_info.name).lower() != 'platform camera':
-            serial = d.get_info(rs.camera_info.serial_number)
-            product_line = d.get_info(rs.camera_info.product_line)
-            device_info = (serial, product_line)  # (serial_number, product_line)
-            connect_device.append(device_info)
-    return connect_device
-
 
 def make_response(status, msg="", **kwargs):
     data = {'status': status, 'msg': msg, 'timestamp': time.time()}
@@ -111,7 +86,6 @@ def capture_frames(device_idx,
                    finish_ev: mp.Event,
                    save_path_tagged: str,
                    save_bag: bool):
-
     # Initialize parameters
     context = rs.context()
     available_devices = enumerate_connected_devices(context)
@@ -122,7 +96,7 @@ def capture_frames(device_idx,
         valid_devices = list(filter(lambda x: x[1] in device_type.split(','), available_devices))
     device = valid_devices[device_idx]
     print(device)
-    
+
     device_serial = device[0]
     product_line = device[1]
 
@@ -133,7 +107,6 @@ def capture_frames(device_idx,
         os.makedirs(osp.join(device_save_path, 'depth'))
     # Configure depth and color streams
     pipeline = rs.pipeline()
-
 
     if product_line == "L500":
         using_L515 = True
@@ -200,7 +173,7 @@ def capture_frames(device_idx,
                 else:
                     frames = pipeline.wait_for_frames()
                     tic = time.time()
-                    
+
                     aligned_frames = align.process(frames)
                     # depth_frame_org = frames.get_depth_frame()
                     if USE_DEPTH:
@@ -235,7 +208,7 @@ def capture_frames(device_idx,
 
                 toc = time.time()
                 n_frames += 1
-                pbar.set_description(f'ProcessTime={int((toc-tic)*1000)}(ms)')
+                pbar.set_description(f'ProcessTime={int((toc - tic) * 1000)}(ms)')
                 pbar.update(1)
 
                 if stop_ev.is_set():
@@ -320,7 +293,7 @@ def kill_record():
     global CAPTURE_PROCS, STOP_EV, FINISH_EV
     logging.info("[realsense] kill")
 
-    if len(CAPTURE_PROCS) and any([proc.is_alive() for proc in CAPTURE_PROCS])> 0:
+    if len(CAPTURE_PROCS) and any([proc.is_alive() for proc in CAPTURE_PROCS]) > 0:
         STOP_EV.set()
         FINISH_EV.wait(timeout=1)
         [proc.join(timeout=1) for proc in CAPTURE_PROCS]
@@ -337,7 +310,7 @@ def quit():
     global CAPTURE_PROCS, STOP_EV, FINISH_EV
     logging.info("[realsense] quit")
 
-    if len(CAPTURE_PROCS) and any([proc.is_alive() for proc in CAPTURE_PROCS])> 0:
+    if len(CAPTURE_PROCS) and any([proc.is_alive() for proc in CAPTURE_PROCS]) > 0:
         sys.exit(1)
     else:
         sys.exit(0)
@@ -356,7 +329,6 @@ def main(args=None):
     # Prepare system
     logging.info('Using the {}-th {} device'.format(args.idx, args.device))
     logging.info('The server listens at port {}'.format(args.port))
-
 
     try:
         # app.run(host='0.0.0.0', port=args.port)

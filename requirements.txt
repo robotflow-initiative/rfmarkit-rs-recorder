@@ -5,3 +5,4 @@ pyrealsense2
 opencv-python
 tqdm
 numpy
+rich
