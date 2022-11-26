@@ -1,0 +1,15 @@
+mainmenu "RealsenseConfigs"
+
+menu "Debug"
+config CONFIG_ENABLE_COLOR
+    bool "Enable color stream"
+    default n
+    help
+        Will print debug information if enable.
+
+config CONFIG_DEBUG_UART
+    bool "Enable UART debug"
+    default n
+    depends on CONFIG_DEBUG
+
+endmenu
