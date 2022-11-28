@@ -141,7 +141,7 @@ class RealsenseCameraModel:
             [0., self.intrinsics.fy, self.intrinsics.ppy],
             [0., 0., 1.]
         ]
-        logging.info(f"Camera {self.option.sn} intrinsics: {self.intrinsics_matrix}")
+        logging.debug(f"camera {self.option.sn} intrinsics: {self.intrinsics_matrix}")
 
     def stop(self, delay_ms: int = 0, clean: bool = False):
         time.sleep(delay_ms / 1e3)
@@ -215,7 +215,7 @@ class RealsenseCameraModel:
         self.colorizer: Optional[rs.colorizer] = None
 
     def close(self):
-        logging.info(f"closing camera {self.option.sn}")
+        logging.debug(f"closing camera {self.option.sn}")
         if self.pipeline is not None:
             try:
                 self.pipeline.stop()
@@ -279,7 +279,7 @@ class RealsenseSystemModel:
                 ret.append(executor.submit(lambda: cam.start(delay_ms=interval_ms * (num_of_cameras - idx))))
 
         list(map(lambda x: x.result(), ret))
-        time.sleep(0.1)
+        time.sleep(0.05)
 
     def stop(self, interval_ms: int = 0):
         num_of_cameras = len(self.cameras)
@@ -290,7 +290,7 @@ class RealsenseSystemModel:
 
         list(map(lambda x: x.result(), ret))
 
-    def app(self):
+    def app(self, *args, **kwargs):
         raise NotImplementedError
 
     def __del__(self):
@@ -298,7 +298,7 @@ class RealsenseSystemModel:
             for cam in self.cameras:
                 cam.close()
         finally:
-            logging.info("closing devices")
+            logging.debug("closing devices")
 
 
 def load_realsense_cameras_cfg_from_dict(cfg_list: List[Dict[str, Any]]):

@@ -1,8 +1,7 @@
-
-flask
-gevent
 pyrealsense2
 opencv-python
 tqdm
 numpy
 rich
+uvicorn
+fastapi
