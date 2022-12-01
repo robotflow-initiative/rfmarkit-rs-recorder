@@ -1,13 +1,8 @@
+import os
+
 from setuptools import setup
 
-requirements = [
-    'flask',
-    'gevent',
-    'pyrealsense2',
-    'opencv-python',
-    'tqdm',
-    'numpy',
-]
+requires = open("./requirements.txt", "r").readlines() if os.path.exists("./requirements.txt") else open("./realsense_recorder.egg-info/requires.txt", "r").readlines()
 
 setup(
     name="realsense_recorder",
@@ -19,12 +14,12 @@ setup(
         "realsense_recorder",
         "realsense_recorder/apps",
         "realsense_recorder/common",
-        "realsense_recorder/io"
+        "realsense_recorder/io",
         "realsense_recorder/remote",
         "realsense_recorder/scripts",
     ],
     python_requires=">=3.6",
-    install_requires=requirements,
+    install_requires=requires,
     entrypoints={
         'console_scripts': [
             'remote = remote.main:main'

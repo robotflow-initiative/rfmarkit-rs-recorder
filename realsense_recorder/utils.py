@@ -3,7 +3,7 @@ from typing import Dict, Any, List
 
 import pyrealsense2 as rs
 
-from .config import new_camera_config_by_device, new_system_config
+from realsense_recorder.common import new_camera_config_by_device, new_system_config
 
 
 def enumerate_connected_devices(ctx: rs.context):
@@ -34,7 +34,7 @@ def enumerate_connected_devices(ctx: rs.context):
 
 def enumerate_devices_that_supports_advanced_mode(ctx: rs.context) -> List[rs.device]:
     DS5_product_ids = ["0AD1", "0AD2", "0AD3", "0AD4", "0AD5", "0AF6", "0AFE", "0AFF", "0B00", "0B01", "0B03", "0B07", "0B3A", "0B5C"]
-    devices = ctx.query_devices();
+    devices = ctx.query_devices()
     res = []
     for dev in devices:
         if dev.supports(rs.camera_info.product_id) and str(dev.get_info(rs.camera_info.product_id)) in DS5_product_ids:

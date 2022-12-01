@@ -20,7 +20,6 @@ from .record import (
     new_realsense_camera_system_from_yaml_file,
     new_system_config,
 )
-from .utils import *
 
 
 class CALLBACKS:

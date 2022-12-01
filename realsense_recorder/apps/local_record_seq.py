@@ -2,24 +2,24 @@ import argparse
 import json
 import os.path as osp
 import time
-from concurrent.futures import ThreadPoolExecutor,ProcessPoolExecutor
+from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Callable
 
 import cv2
 cv2.setNumThreads(0)
 import numpy as np
-import pyrealsense2 as rs
 import tqdm
 from realsense_recorder.common import (
     RealsenseCameraCfg,
     RealsenseSystemCfg,
     RealsenseSystemModel,
-    enumerate_devices_that_supports_advanced_mode,
     new_realsense_camera_system_from_yaml_file,
     CALLBACKS,
-    get_datetime_tag
 )
 
+from realsense_recorder.utils import (
+    get_datetime_tag,
+)
 
 class LocalRecordSeq(RealsenseSystemModel):
     def __init__(self,

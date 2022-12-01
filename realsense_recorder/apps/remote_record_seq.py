@@ -5,14 +5,12 @@ import multiprocessing as mp
 import os
 import os.path as osp
 import signal
-import sys
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional
 
 import cv2
 import numpy as np
-import rich
 import tqdm
 import uvicorn
 from fastapi import FastAPI
@@ -24,9 +22,10 @@ from realsense_recorder.common import (
     new_realsense_camera_system_from_yaml_file,
     RealsenseSystemModel,
     RealsenseSystemCfg,
-    RealsenseCameraCfg,
-    get_datetime_tag
+    RealsenseCameraCfg
 )
+
+from realsense_recorder.utils import get_datetime_tag
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
@@ -168,7 +167,7 @@ class RemoteRecordSeq(RealsenseSystemModel):
 
 
 def make_response(status_code, **kwargs):
-    data = {'status': status_code, 'timestamp': time.time()}
+    data = {'code': status_code, 'timestamp': time.time()}
     data.update(**kwargs)
     json_compatible_data = jsonable_encoder(data)
     resp = JSONResponse(content=json_compatible_data, status_code=status_code)
@@ -201,7 +200,7 @@ def status():
 
 
 @app.post("/v1/start")
-def start_process(tag: str=None):
+def start_process(tag: str = None):
     global CAPTURE_PROCS, STOP_EV, FINISH_EV, ARGS
 
     # Wait until last capture ends
@@ -237,7 +236,7 @@ def start_process(tag: str=None):
             [(proc.start(), time.sleep(DELAY_S
                                        )) for proc in CAPTURE_PROCS]
 
-        return make_response(status_code=200, msg=f"START OK", subpath=tag)
+        return make_response(status_code=200, msg="START OK", subpath=tag)
 
 
 @app.post("/v1/stop")
@@ -247,7 +246,7 @@ def stop_process():
 
     if len(CAPTURE_PROCS) > 0 and any([proc.is_alive() for proc in CAPTURE_PROCS]):
         STOP_EV.set()
-        return make_response(status_code=200, msg=f"STOP OK: {len(CAPTURE_PROCS)} procs are running")
+        return make_response(status_code=200, msg=f"STOP OK: {len([None for proc in CAPTURE_PROCS if proc.is_alive()])} procs are running")
     else:
         return make_response(status_code=500, msg="NOT RUNNING")
 
@@ -278,7 +277,7 @@ def main(args: argparse.Namespace):
     try:
         uvicorn.run(app=app, port=args.port)
     except KeyboardInterrupt:
-        print(f"[realsense]:  main() got KeyboardInterrupt")
+        logging.info(f"main() got KeyboardInterrupt")
         exit(1)
 
 

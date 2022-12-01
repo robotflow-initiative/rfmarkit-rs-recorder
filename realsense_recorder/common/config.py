@@ -259,7 +259,6 @@ class RealsenseCameraCfg(BaseCfg):
         console.print(self.depth)
         console.print(self.imu)
         console.rule(f"[bold blue] End ")
-        rs.camera_info.name
 
         return True
 

@@ -14,8 +14,9 @@ from realsense_recorder.common import (
     RealsenseSystemModel,
     new_realsense_camera_system_from_yaml_file,
     CALLBACKS,
-    get_datetime_tag
 )
+
+from realsense_recorder.utils import get_datetime_tag
 
 
 class MultiCaptureStatic(RealsenseSystemModel):
@@ -38,7 +39,7 @@ class MultiCaptureStatic(RealsenseSystemModel):
         self.console.log("opening devices")
         self.open()
         if self.options.interactive:
-            console.log("creating windows")
+            self.console.log("creating windows")
             create_windows()
         self.console.log("starting devices")
         self.start(interval_ms=self.options.interval_ms)
@@ -63,7 +64,6 @@ class MultiCaptureStatic(RealsenseSystemModel):
                 for idx, cam in enumerate(self.cameras):
                     tic = time.time()
                     color_image, depth_image, ts, sys_ts, frame_counter = cam.get_frames()
-                    self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter)
                     toc = time.time()
 
                     if color_image is not None:
@@ -105,7 +105,6 @@ class MultiCaptureStatic(RealsenseSystemModel):
                 self.console.log(f"saving last frames of camera {cam.option.sn}")
                 while True:
                     color_image, depth_image, ts, sys_ts, frame_counter = cam.get_frames()
-                    self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter)
                     if frame_counter > 0:
                         if color_image is not None:
                             save_workers.submit(lambda: cv2.imwrite(osp.join(cam.color_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.bmp'), color_image))
@@ -120,7 +119,6 @@ class MultiCaptureStatic(RealsenseSystemModel):
             self.stop()
             self.close()
             save_workers.shutdown(wait=True)
-            self.save_meta_data()
             cv2.destroyAllWindows()
             return
 
@@ -136,7 +134,7 @@ def main(args):
         CALLBACKS.camera_friendly_name: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }
 
-    sys = new_realsense_camera_system_from_yaml_file(LocalRecordSequence, args.config, callbacks)
+    sys = new_realsense_camera_system_from_yaml_file(MultiCaptureStatic, args.config, callbacks)
 
     sys.app()
 

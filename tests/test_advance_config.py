@@ -15,7 +15,7 @@ DS5_product_ids = ["0AD1", "0AD2", "0AD3", "0AD4", "0AD5", "0AF6", "0AFE", "0AFF
 def find_device_that_supports_advanced_mode() :
     ctx = rs.context()
     ds5_dev = rs.device()
-    devices = ctx.query_devices();
+    devices = ctx.query_devices()
     for dev in devices:
         if dev.supports(rs.camera_info.product_id) and str(dev.get_info(rs.camera_info.product_id)) in DS5_product_ids:
             if dev.supports(rs.camera_info.name):

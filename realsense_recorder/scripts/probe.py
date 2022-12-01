@@ -1,11 +1,3 @@
-import pyrealsense2 as rs
-import argparse
-import json
-import os
-import sys
-import pprint
-
-from realsense_recorder.common import enumerate_connected_devices
 import argparse
 import json
 import os
@@ -14,7 +6,7 @@ import sys
 
 import pyrealsense2 as rs
 
-from realsense_recorder.common import enumerate_connected_devices
+from realsense_recorder.utils import enumerate_connected_devices
 
 
 def get_base_dir(path: str) -> str:

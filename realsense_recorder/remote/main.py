@@ -7,7 +7,7 @@ import os.path as osp
 import signal
 import sys
 import time
-from typing import List
+from typing import List, Optional
 
 import cv2
 import numpy as np
@@ -17,7 +17,7 @@ from flask import Flask, request, Response
 from gevent import pywsgi
 from tqdm import tqdm
 
-from realsense_recorder.common import enumerate_connected_devices
+from realsense_recorder.utils import enumerate_connected_devices
 
 app = Flask(__name__)
 logging.basicConfig(level=logging.INFO)
@@ -26,8 +26,8 @@ STOP_EV: mp.Event = mp.Event()
 FINISH_EV: mp.Event = mp.Event()
 CAPTURE_PROCS: List[mp.Process] = []
 DEVICE_IDX = None
-SAVE_PATH_BASE: str = None
-DEVICE_TYPE: str = None  # L500 or D400
+SAVE_PATH_BASE: Optional[str] = None
+DEVICE_TYPE: Optional[str] = None  # L500 or D400
 
 # if using D435
 # depth_scale = 0.001
