@@ -55,7 +55,7 @@ class RemoteRecordSeq(RealsenseSystemModel):
         save_path = osp.join(self.options.base_dir, "metadata_all.json")
         config_save_path = osp.join(self.options.base_dir, "realsense_config.json")
         bundle = {
-            "camera_sn": list(self.metadata.keys()),
+            "camera_sn": [cam.option.sn for cam in self.cameras],
             "metadata": self.metadata
         }
         with open(save_path, 'w') as f:
