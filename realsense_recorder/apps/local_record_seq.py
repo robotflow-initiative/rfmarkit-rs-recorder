@@ -37,9 +37,18 @@ class LocalRecordSeq(RealsenseSystemModel):
         })
 
     def save_meta_data(self):
-        save_path = osp.join(self.options.base_dir, "metadata_all.json")
-        with open(save_path, 'w') as f:
-            json.dump(self.metadata, f, indent=4)
+        meta_save_path = osp.join(self.options.base_dir, "metadata_all.json")
+        config_save_path = osp.join(self.options.base_dir, "realsense_config.json")
+        bundle = {
+            "camera_sn": list(self.metadata.keys()),
+            "metadata": self.metadata
+        }
+        with open(meta_save_path, 'w') as f:
+            json.dump(bundle, f, indent=4)
+
+        with open(config_save_path, 'w') as f:
+            json.dump({"realsense": {"system": self.options.get_dict(), "cameras": list(map(lambda x: x.get_dict(), self.camera_options))}}, f, indent=4)
+
 
     def app(self):
 
@@ -156,7 +165,7 @@ def main(args):
     callbacks = {
         CALLBACKS.tag_cb: lambda: get_datetime_tag() if args.tag is None else lambda: args.tag,
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
-        CALLBACKS.camera_friendly_name: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
+        CALLBACKS.camera_friendly_name_cb: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }
 
     sys = new_realsense_camera_system_from_yaml_file(LocalRecordSeq, args.config, callbacks)

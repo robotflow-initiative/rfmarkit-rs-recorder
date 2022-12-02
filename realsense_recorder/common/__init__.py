@@ -25,7 +25,7 @@ from .record import (
 class CALLBACKS:
     save_path_cb = "save_path_cb"
     tag_cb = "tag_cb"
-    camera_friendly_name = "camera_friendly_name"
+    camera_friendly_name_cb = "camera_friendly_name_cb"
 
 #
 # CALLBACKS = Callbacks()

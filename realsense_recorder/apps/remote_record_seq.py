@@ -53,8 +53,16 @@ class RemoteRecordSeq(RealsenseSystemModel):
 
     def save_meta_data(self):
         save_path = osp.join(self.options.base_dir, "metadata_all.json")
+        config_save_path = osp.join(self.options.base_dir, "realsense_config.json")
+        bundle = {
+            "camera_sn": list(self.metadata.keys()),
+            "metadata": self.metadata
+        }
         with open(save_path, 'w') as f:
-            json.dump(self.metadata, f, indent=4)
+            json.dump(bundle, f, indent=4)
+
+        with open(config_save_path, 'w') as f:
+            json.dump({"realsense": {"system": self.options.get_dict(), "cameras": list(map(lambda x: x.get_dict(), self.camera_options))}}, f, indent=4)
 
     def app(self, stop_ev: mp.Event, finish_ev: mp.Event):
 
@@ -181,7 +189,7 @@ def capture_frames(stop_ev: mp.Event,
     callbacks = {
         CALLBACKS.tag_cb: lambda: tag,
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
-        CALLBACKS.camera_friendly_name: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
+        CALLBACKS.camera_friendly_name_cb: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }
 
     sys = new_realsense_camera_system_from_yaml_file(RemoteRecordSeq, config, callbacks)

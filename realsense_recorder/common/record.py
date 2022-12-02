@@ -13,6 +13,7 @@ import yaml
 
 from .config import get_device_by_cfg, RealsenseSystemCfg, new_camera_config_by_product_id, RealsenseCameraCfg
 from realsense_recorder.utils import new_system_config, get_datetime_tag, enumerate_devices_that_supports_advanced_mode
+from realsense_recorder.common import CALLBACKS
 
 
 class RealsenseCameraModel:
@@ -47,14 +48,14 @@ class RealsenseCameraModel:
 
         # Handle Callback
         # Handle save_path_cb
-        if callbacks is not None and 'save_path_cb' in callbacks:
-            self.save_path = callbacks['save_path_cb'](camera_cfg, system_cfg)
+        if callbacks is not None and CALLBACKS.save_path_cb in callbacks:
+            self.save_path = callbacks[CALLBACKS.save_path_cb](camera_cfg, system_cfg)
         else:
             self.save_path = osp.join(system_cfg.base_dir, camera_cfg.sn)
 
         # Handle friendly name cb
-        if callbacks is not None and 'camera_friendly_name_cb' in callbacks:
-            self.friendly_name = callbacks['camera_frinedly_name'](camera_cfg, system_cfg)
+        if callbacks is not None and CALLBACKS.camera_friendly_name_cb in callbacks:
+            self.friendly_name = callbacks[CALLBACKS.camera_friendly_name_cb](camera_cfg, system_cfg)
         else:
             self.friendly_name = self.option.sn
 
@@ -233,8 +234,8 @@ class RealsenseSystemModel:
                  camera_cfgs: List[RealsenseCameraCfg],
                  callbacks: Dict[str, Callable] = None):
         self.console = rich.console.Console()
-        if callbacks is not None and 'tag_cb' in callbacks:
-            self.tag = callbacks['tag_cb']()
+        if callbacks is not None and CALLBACKS.tag_cb in callbacks:
+            self.tag = callbacks[CALLBACKS.tag_cb]()
         else:
             self.tag = get_datetime_tag()
 
@@ -279,7 +280,7 @@ class RealsenseSystemModel:
                 ret.append(executor.submit(lambda: cam.start(delay_ms=interval_ms * (num_of_cameras - idx))))
 
         list(map(lambda x: x.result(), ret))
-        time.sleep(0.05)
+        time.sleep(0.1)
 
     def stop(self, interval_ms: int = 0):
         num_of_cameras = len(self.cameras)
