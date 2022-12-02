@@ -1,4 +1,4 @@
-from realsense_recorder.apps.local_capture_static_interactive import main
+from realsense_recorder.cmd.local_capture_static_interactive import main
 
 
 class DefaultArgs:
