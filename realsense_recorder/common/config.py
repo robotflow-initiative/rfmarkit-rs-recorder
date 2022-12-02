@@ -31,6 +31,11 @@ _ = {
         }
     },
 
+class CALLBACKS:
+    save_path_cb = "save_path_cb"
+    tag_cb = "tag_cb"
+    camera_friendly_name_cb = "camera_friendly_name_cb"
+
 
 class BaseCfg:
     def get_dict(self) -> Dict[Any, Any]:

@@ -1,4 +1,5 @@
 from .config import (
+    CALLBACKS,
     RealsenseCameraCfg,
     RealsenseD435CameraCfg,
     RealsenseL515CameraCfg,
@@ -20,12 +21,6 @@ from .record import (
     new_realsense_camera_system_from_yaml_file,
     new_system_config,
 )
-
-
-class CALLBACKS:
-    save_path_cb = "save_path_cb"
-    tag_cb = "tag_cb"
-    camera_friendly_name_cb = "camera_friendly_name_cb"
 
 #
 # CALLBACKS = Callbacks()

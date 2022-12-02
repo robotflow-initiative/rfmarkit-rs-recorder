@@ -24,7 +24,6 @@ from realsense_recorder.common import (
     RealsenseSystemCfg,
     RealsenseCameraCfg
 )
-
 from realsense_recorder.utils import get_datetime_tag
 
 app = FastAPI()
@@ -32,6 +31,7 @@ logging.basicConfig(level=logging.INFO)
 
 STOP_EV: mp.Event = mp.Event()
 FINISH_EV: mp.Event = mp.Event()
+READY_EV: mp.Event = mp.Event()
 CAPTURE_PROCS: List[mp.Process] = []
 ARGS: Optional[argparse.Namespace] = None
 
@@ -64,7 +64,7 @@ class RemoteRecordSeq(RealsenseSystemModel):
         with open(config_save_path, 'w') as f:
             json.dump({"realsense": {"system": self.options.get_dict(), "cameras": list(map(lambda x: x.get_dict(), self.camera_options))}}, f, indent=4)
 
-    def app(self, stop_ev: mp.Event, finish_ev: mp.Event):
+    def app(self, stop_ev: mp.Event, finish_ev: mp.Event, ready_ev: mp.Event = None):
 
         def save_color_frame(path, frame):
             cv2.imwrite(path, frame)
@@ -96,6 +96,9 @@ class RemoteRecordSeq(RealsenseSystemModel):
         self.console.log("[]start recording")
         progress_bars = [tqdm.tqdm(ncols=0) for _ in range(len(self.cameras))]
         save_workers = ThreadPoolExecutor(max_workers=len(self.cameras) * 2)
+
+        if ready_ev is not None:
+            ready_ev.set()
 
         try:
             while True:
@@ -172,6 +175,8 @@ class RemoteRecordSeq(RealsenseSystemModel):
             raise e
         finally:
             finish_ev.set()
+            ready_ev.clear()
+            self.console.log(f"finished recording, tag={self.tag}")
 
 
 def make_response(status_code, **kwargs):
@@ -184,6 +189,7 @@ def make_response(status_code, **kwargs):
 
 def capture_frames(stop_ev: mp.Event,
                    finish_ev: mp.Event,
+                   ready_ev: mp.Event,
                    config: str,
                    tag: str):
     callbacks = {
@@ -194,7 +200,7 @@ def capture_frames(stop_ev: mp.Event,
 
     sys = new_realsense_camera_system_from_yaml_file(RemoteRecordSeq, config, callbacks)
 
-    sys.app(stop_ev, finish_ev)
+    sys.app(stop_ev, finish_ev, ready_ev)
 
 
 @app.get("/")
@@ -207,9 +213,21 @@ def status():
     return make_response(status_code=200, active_processes=[proc.is_alive() for proc in CAPTURE_PROCS].count(True))
 
 
+@app.get("/v1/ready")
+def ready():
+    global READY_EV
+    if READY_EV is not None:
+        if READY_EV.is_set():
+            return make_response(status_code=200, ready=True)
+        else:
+            return make_response(status_code=200, ready=False)
+    else:
+        return make_response(status_code=500, msg="NOT SUPPORTED")
+
+
 @app.post("/v1/start")
 def start_process(tag: str = None):
-    global CAPTURE_PROCS, STOP_EV, FINISH_EV, ARGS
+    global CAPTURE_PROCS, STOP_EV, FINISH_EV, READY_EV, ARGS
 
     # Wait until last capture ends
     if len(CAPTURE_PROCS) > 0:
@@ -220,7 +238,9 @@ def start_process(tag: str = None):
                 if any([proc.is_alive() for proc in CAPTURE_PROCS]):
                     logging.warning("[realsense] join timeout")
                     [os.kill(proc.pid, signal.SIGTERM) for proc in CAPTURE_PROCS if proc.is_alive()]
+                # clean up resources
                 CAPTURE_PROCS = []
+                READY_EV.clear()
             else:
                 return make_response(status_code=500, msg="NOT FINISHED")
         else:
@@ -238,6 +258,7 @@ def start_process(tag: str = None):
             CAPTURE_PROCS = [mp.Process(target=capture_frames,
                                         args=(STOP_EV,
                                               FINISH_EV,
+                                              READY_EV,
                                               ARGS.config,
                                               tag))]
             DELAY_S = 2  # Magic delay duration to avoid U3V communication error
