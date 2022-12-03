@@ -163,7 +163,7 @@ class LocalRecordSeq(RealsenseSystemModel):
 
 def main(args):
     callbacks = {
-        CALLBACKS.tag_cb: lambda: get_datetime_tag() if args.tag is None else lambda: args.tag,
+        CALLBACKS.tag_cb: (lambda: get_datetime_tag()) if args.tag is None else (lambda: args.tag),
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
         CALLBACKS.camera_friendly_name_cb: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }

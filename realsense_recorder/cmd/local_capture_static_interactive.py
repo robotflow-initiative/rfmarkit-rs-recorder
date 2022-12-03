@@ -28,6 +28,7 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
         for camera_idx in range(len(camera_cfgs)):
             for color_idx in range(len(camera_cfgs[camera_idx].color)):
                 camera_cfgs[camera_idx].color[color_idx].fps = camera_cfgs[camera_idx].__COLOR_FPS_CANDIDATES__[0]
+                camera_cfgs[camera_idx].color[color_idx].exposure = -1
         system_cfg.interval_ms = 500
 
         super().__init__(system_cfg, camera_cfgs, callbacks)
@@ -83,16 +84,10 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
                     if depth_image is not None:
                         np.save(osp.join(cam.depth_save_path, f'{n_frames}.npy'), depth_image)
 
-                    if color_image is not None and depth_image is not None:
+                    if color_image is not None:
                         mix = cv2.resize(color_image, _resolution)
-                        # mix = cv2.addWeighted(color_image[..., 0:3], 0.5, cv2.resize(depth_image, (color_image.shape[1], color_image.shape[0])), 0.5, 0)
-                    elif color_image is not None and depth_image is None:
-                        mix = cv2.resize(color_image, _resolution)
-                    elif color_image is None and depth_image is not None:
-                        mix = cv2.resize(depth_image, _resolution)
-                    else:
-                        break
                     cv2.imshow(cam.window_name, mix)
+                    cv2.waitKey(1)
 
                 n_frames += 1
 
@@ -115,8 +110,9 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
 
 
 def main(args):
+
     callbacks = {
-        CALLBACKS.tag_cb: lambda: get_datetime_tag() if args.tag is None else lambda: args.tag,
+        CALLBACKS.tag_cb: (lambda: get_datetime_tag()) if args.tag is None else (lambda: args.tag),
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
         CALLBACKS.camera_friendly_name_cb: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }
