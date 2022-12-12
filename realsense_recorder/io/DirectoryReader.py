@@ -99,9 +99,11 @@ class DirectoryReader:
         self.metadata = list(map(lambda x: self.parse_function(x), self.frame_path_list))
         self.curr_idx = 0
 
-    def reload(self, new_frame_path_list=None):
+    def reload(self, new_frame_path_list=None, sort=False):
         if new_frame_path_list is not None:
             self.frame_path_list = new_frame_path_list
+            if sort:
+                self.frame_path_list = sorted(self.frame_path_list, key=index_function_0)
 
         self.metadata = list(map(lambda x: self.parse_function(x), self.frame_path_list))
         self.curr_idx = 0
