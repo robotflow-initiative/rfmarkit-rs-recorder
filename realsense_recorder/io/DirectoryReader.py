@@ -49,11 +49,13 @@ def parse_function_0(label: str):
     :param label:
     :return:
     """
-    meta = os.path.basename(label).split('_')
+    basename = os.path.basename(label)
+    meta = os.path.splitext(basename)[0].split('_')
     return {
         "frame_idx": meta[0],
         "timestamp_int": meta[1],
-        "timestamp": meta[2]
+        "timestamp": meta[2],
+        "basename": basename
     }
 
 
@@ -92,8 +94,15 @@ class DirectoryReader:
         return len(self.frame_path_list)
 
     def load(self):
-        self.frame_path_list: List[str] = glob.glob(os.path.join(self.path_to_folder, self.glob_pattern))
-        self.frame_path_list = sorted(self.frame_path_list, key=index_function_0)
+        frame_path_list: List[str] = glob.glob(os.path.join(self.path_to_folder, self.glob_pattern))
+        self.frame_path_list = sorted(frame_path_list, key=index_function_0)
+        self.metadata = list(map(lambda x: self.parse_function(x), self.frame_path_list))
+        self.curr_idx = 0
+
+    def reload(self, new_frame_path_list=None):
+        if new_frame_path_list is not None:
+            self.frame_path_list = new_frame_path_list
+
         self.metadata = list(map(lambda x: self.parse_function(x), self.frame_path_list))
         self.curr_idx = 0
 
@@ -214,46 +223,66 @@ class DirectoryReader:
         self.curr_idx = max(min(idx, len(self.frame_path_list) - 1), 0)
 
 
-def get_directory_reader(path_to_folder: str, type: str, num_preload: int = 0) -> DirectoryReader:
+def get_directory_reader(path_to_folder: str,
+                         type: str,
+                         num_preload: int = 0,
+                         read_function: Callable = None) -> DirectoryReader:
     """
     Get directory reader by label
     :param path_to_folder:
     :param type:
     :param num_preload:
+    :param read_function:
     :return:
     """
     if type == "color_bmp":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
-                               read_function=read_function_0,
+                               read_function=read_function_0 if read_function is None else read_function,
                                parse_function=parse_function_0,
                                glob_pattern="*.bmp",
                                num_preload=num_preload)
     elif type == "color_png":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
-                               read_function=read_function_0,
+                               read_function=read_function_0 if read_function is None else read_function,
                                parse_function=parse_function_0,
                                glob_pattern="*.png",
                                num_preload=num_preload)
     elif type == "color_jpg":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
-                               read_function=read_function_0,
+                               read_function=read_function_0 if read_function is None else read_function,
                                parse_function=parse_function_0,
                                glob_pattern="*.jpg",
                                num_preload=num_preload)
+    elif type == "color_jpeg":
+        return DirectoryReader(path_to_folder,
+                               sorting_function=index_function_0,
+                               read_function=read_function_0 if read_function is None else read_function,
+                               parse_function=parse_function_0,
+                               glob_pattern="*.jpeg",
+                               num_preload=num_preload)
+
     elif type == "depth_npy":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
-                               read_function=read_function_1,
+                               read_function=read_function_1 if read_function is None else read_function,
                                parse_function=parse_function_0,
                                glob_pattern="*.npy",
                                num_preload=num_preload)
+    elif type == "depth_npz":
+        return DirectoryReader(path_to_folder,
+                               sorting_function=index_function_0,
+                               read_function=read_function_1 if read_function is None else read_function,
+                               parse_function=parse_function_0,
+                               glob_pattern="*.npz",
+                               num_preload=num_preload)
+
     elif type == "depth_png":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
-                               read_function=read_function_2,
+                               read_function=read_function_2 if read_function is None else read_function,
                                parse_function=parse_function_0,
                                glob_pattern="*.png",
                                num_preload=num_preload)
