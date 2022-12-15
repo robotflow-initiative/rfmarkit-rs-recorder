@@ -129,7 +129,7 @@ class DirectoryReader:
             img, meta = np.empty(0), {}
 
         with self.frame_buffer_lock:
-            self.frame_buffer[idx] = (img, meta)
+            self.frame_buffer[idx] = (img, meta, idx)
 
     def _delete_frame_from_buffer(self, idx: int) -> None:
         """
@@ -161,9 +161,9 @@ class DirectoryReader:
         if 0 <= idx < len(self.frame_path_list):
             img = self.read_function(self.frame_path_list[idx])
             meta = self.metadata[idx]
-            return img, meta
+            return img, meta, idx
         else:
-            return np.empty(0), {}
+            return np.empty(0), {}, idx
 
     def next(self) -> Tuple[np.ndarray, Dict]:
         """
@@ -176,13 +176,13 @@ class DirectoryReader:
         img, meta = None, None
         with self.frame_buffer_lock:
             if self._is_in_buffer(self.curr_idx):
-                img, meta = self.frame_buffer[self.curr_idx]
+                img, meta, idx = self.frame_buffer[self.curr_idx]
                 self._delete_frame_from_buffer(self.curr_idx)
         if img is None:
-            img, meta = self._read_frame(self.curr_idx)
+            img, meta, idx = self._read_frame(self.curr_idx)
 
         self.curr_idx = min(self.__len__(), self.curr_idx + 1)
-        return img, meta
+        return img, meta, idx
 
     def prev(self) -> Tuple[np.ndarray, Dict]:
         """
@@ -194,16 +194,16 @@ class DirectoryReader:
         for n_preload in range(self.num_preload):
             self._cache_frame(self.curr_idx - n_preload)
 
-        img, meta = None, None
+        img, meta, idx = None, None, -1
         with self.frame_buffer_lock:
             if self._is_in_buffer(self.curr_idx):
-                img, meta = self.frame_buffer[self.curr_idx]
+                img, meta, idx = self.frame_buffer[self.curr_idx]
                 self._delete_frame_from_buffer(self.curr_idx)
 
         if img is None:
-            img, meta = self._read_frame(self.curr_idx)
+            img, meta, idx = self._read_frame(self.curr_idx)
 
-        return img, meta
+        return img, meta, idx
 
     @property
     def eof(self):
