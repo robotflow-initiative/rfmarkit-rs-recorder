@@ -22,10 +22,9 @@ from realsense_recorder.common import (
     new_realsense_camera_system_from_yaml_file,
     RealsenseSystemModel,
     RealsenseSystemCfg,
-    RealsenseCameraCfg
+    RealsenseCameraCfg,
+    get_datetime_tag
 )
-from realsense_recorder.utils import get_datetime_tag
-
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
 
@@ -309,11 +308,14 @@ def main(args: argparse.Namespace):
         logging.info(f"main() got KeyboardInterrupt")
         exit(1)
 
-
-if __name__ == '__main__':
-    # Parse Arguments
+def entry_point(argv):
     parser = argparse.ArgumentParser(description='Recorder')
     parser.add_argument('--config', type=str, help='The realsense system configuration', default='./realsense_config.yaml')
     parser.add_argument('--port', type=int, help="Port to listen", default=5050)
     parser.add_argument('--debug', action='store_true', help='Toggle Debug mode')
-    main(parser.parse_args())
+    args = parser.parse_args(argv)
+    main(args)
+
+if __name__ == '__main__':
+    import sys
+    entry_point(sys.argv)

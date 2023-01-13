@@ -1,5 +1,7 @@
 # RealsenseRecorder
 
+A set of Python scripts to operate Intel Realsense Cameras. By using multi-thread techniques, this script can record color + depth from up to 4 Realsense Cameras (2 x L515 and 2 x D435)
+
 ## Installation
 
 ### From Source
@@ -16,8 +18,9 @@ python setup.py
 python -m pip install realsense-recorder
 ```
 
-
 ## Usage
+
+### Script Usage
 
 ```python
 import io
@@ -36,14 +39,13 @@ realsense:
       fps: 30
       height: 1080
       width: 1920
-    depth: []
+    depth: [] # Do not user depth 
     endpoint: {}
     imu: []
-    product_id: 0B64
-    product_line: L500
+    product_id: 0B64 # 0B64 for L515
+    product_line: L500 # Currently supported models are L500(L515) and D400(D435)
     ref: 1
-    sn: f0220485
-    use_depth: false
+    sn: f0220485 # SN of target Camera, can get from RealSenseViewer
   system:
     base_dir: ./realsense_data
     frame_queue_size: 100
@@ -71,4 +73,18 @@ def main():
             break
 
 main()
+```
+
+### Command Line Usage
+
+To Create and persist record configuration:
+
+```shell
+python -m realsense-recorder configure
+```
+
+To launch a remote record station that supports REST API
+
+```shell
+python -m realsense-recorder run --app=remote_record_seq
 ```

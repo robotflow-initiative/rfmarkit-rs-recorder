@@ -4,7 +4,7 @@ import logging
 import yaml
 from rich.console import Console
 
-from realsense_recorder.utils import configure_realsense_system_from_keyboard
+from realsense_recorder.common import configure_realsense_system_from_keyboard
 
 
 def main(args: argparse.Namespace):
@@ -25,10 +25,14 @@ def main(args: argparse.Namespace):
     except KeyboardInterrupt as e:
         logging.info("abort")
 
-
-if __name__ == '__main__':
+def entry_point(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", "-i", type=str, default=None, help="path to input config file")
     parser.add_argument("--output", "-o", type=str, default="realsense_config.yaml", help="path to output config file")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     main(args)
+
+
+if __name__ == '__main__':
+    import sys
+    entry_point(sys.argv)

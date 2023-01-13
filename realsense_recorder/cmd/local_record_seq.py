@@ -15,11 +15,9 @@ from realsense_recorder.common import (
     RealsenseSystemModel,
     new_realsense_camera_system_from_yaml_file,
     CALLBACKS,
+    get_datetime_tag
 )
 
-from realsense_recorder.utils import (
-    get_datetime_tag,
-)
 
 class LocalRecordSeq(RealsenseSystemModel):
     def __init__(self,
@@ -172,10 +170,13 @@ def main(args):
 
     sys.app()
 
-
-if __name__ == '__main__':
+def entry_point(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./realsense_config.yaml')
     parser.add_argument('--tag', type=str, default=None)
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     main(args)
+
+if __name__ == '__main__':
+    import sys
+    entry_point(sys.argv)

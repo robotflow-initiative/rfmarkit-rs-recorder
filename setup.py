@@ -15,7 +15,6 @@ setup(
         "realsense_recorder/cmd",
         "realsense_recorder/common",
         "realsense_recorder/io",
-        "realsense_recorder/remote",
         "realsense_recorder/scripts",
     ],
     python_requires=">=3.6",
