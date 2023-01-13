@@ -228,7 +228,8 @@ class DirectoryReader:
 def get_directory_reader(path_to_folder: str,
                          type: str,
                          num_preload: int = 0,
-                         read_function: Callable = None) -> DirectoryReader:
+                         read_function: Callable = None,
+                         parse_function: Callable = None) -> DirectoryReader:
     """
     Get directory reader by label
     :param path_to_folder:
@@ -241,28 +242,28 @@ def get_directory_reader(path_to_folder: str,
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_0 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.bmp",
                                num_preload=num_preload)
     elif type == "color_png":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_0 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.png",
                                num_preload=num_preload)
     elif type == "color_jpg":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_0 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.jpg",
                                num_preload=num_preload)
     elif type == "color_jpeg":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_0 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.jpeg",
                                num_preload=num_preload)
 
@@ -270,14 +271,14 @@ def get_directory_reader(path_to_folder: str,
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_1 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.npy",
                                num_preload=num_preload)
     elif type == "depth_npz":
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_1 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.npz",
                                num_preload=num_preload)
 
@@ -285,7 +286,7 @@ def get_directory_reader(path_to_folder: str,
         return DirectoryReader(path_to_folder,
                                sorting_function=index_function_0,
                                read_function=read_function_2 if read_function is None else read_function,
-                               parse_function=parse_function_0,
+                               parse_function=parse_function_0 if parse_function is None else parse_function,
                                glob_pattern="*.png",
                                num_preload=num_preload)
     else:

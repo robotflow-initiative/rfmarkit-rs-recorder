@@ -101,12 +101,13 @@ class RealsenseCameraModel:
         assert self.device is not None, f"Device {self.option.sn} not found"
 
         # Depth Preset
-        depth_sensor = self.device.first_depth_sensor()
-        preset_range = depth_sensor.get_option_range(rs.option.visual_preset)
-        for i in range(int(preset_range.max) + 1):
-            visual_preset = depth_sensor.get_option_value_description(rs.option.visual_preset, i)
-            if visual_preset == self.option.depth[0].preset:
-                depth_sensor.set_option(rs.option.visual_preset, i)
+        if len(self.option.depth) > 0:
+            depth_sensor = self.device.first_depth_sensor()
+            preset_range = depth_sensor.get_option_range(rs.option.visual_preset)
+            for i in range(int(preset_range.max) + 1):
+                visual_preset = depth_sensor.get_option_value_description(rs.option.visual_preset, i)
+                if visual_preset == self.option.depth[0].preset:
+                    depth_sensor.set_option(rs.option.visual_preset, i)
 
         # RGB exposure
         sensor = self.device.query_sensors()[1]
@@ -165,18 +166,18 @@ class RealsenseCameraModel:
         if self.use_bag:
             self.frame_queue.wait_for_frame()
             ts = time.time()
-            return None, None, ts, ts, -1
+            return None, None, -1, ts, -1
         else:
             if self.frame_queue is not None:
                 ret, frames = self.frame_queue.try_wait_for_frame(timeout_ms=timeout_ms)
                 if not ret:
-                    return None, None, time.time(), -1, -1
+                    return None, None, -1, time.time(), -1
                 else:
                     frames = rs.composite_frame(frames)
             else:
                 ret, frames = self.pipeline.try_wait_for_frames(timeout_ms=timeout_ms)
                 if not ret:
-                    return None, None, time.time(), -1, -1
+                    return None, None, -1, time.time(), -1
                 else:
                     pass
 
@@ -187,7 +188,7 @@ class RealsenseCameraModel:
             try:
                 aligned_frames = self.align.process(frames)
             except RuntimeError as e:
-                return None, None, sys_ts, ts, -1
+                return None, None, ts, sys_ts, -1
             depth_frame = aligned_frames.get_depth_frame()
             color_frame = aligned_frames.get_color_frame()
 

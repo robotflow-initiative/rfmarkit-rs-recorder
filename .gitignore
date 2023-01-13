@@ -1,6 +1,10 @@
+.idea
+.vscode
+
 realsense_data
 dist
 build
+
 
 *.pyc
 *.vscode
