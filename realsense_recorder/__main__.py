@@ -6,6 +6,8 @@ import realsense_recorder.cmd  as cmd
 parser = argparse.ArgumentParser()
 
 args = sys.argv[1:]
+if len(args) == 0:
+    exit(print("No arguments provided"))
 if args[0] == "configure":
     exit(scripts._EXPORTS[args[0]](args[1:]))
 elif args[0] == "run":

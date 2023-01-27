@@ -15,7 +15,7 @@ python setup.py
 ### From PyPi
 
 ```shell
-python -m pip install realsense-recorder
+python -m pip install markit-realsense-recorder
 ```
 
 ## Usage
@@ -80,11 +80,11 @@ main()
 To Create and persist record configuration:
 
 ```shell
-python -m realsense-recorder configure
+python -m realsense_recorder configure
 ```
 
 To launch a remote record station that supports REST API
 
 ```shell
-python -m realsense-recorder run --app=remote_record_seq
+python -m realsense_recorder run --app=remote_record_seq
 ```
