@@ -2,11 +2,11 @@ import os
 
 from setuptools import setup
 
-requires = open("./requirements.txt", "r").readlines() if os.path.exists("./requirements.txt") else open("./realsense_recorder.egg-info/requires.txt", "r").readlines()
+requires = open("./requirements.txt", "r").readlines() if os.path.exists("./requirements.txt") else open("./markit_realsense_recorder.egg-info/requires.txt", "r").readlines()
 
 setup(
     name="markit-realsense-recorder",
-    version="1.5",
+    version="1.6",
     author="davidliyutong",
     author_email="davidliyutong@sjtu.edu.cn",
     description="Realsense remote recorder",
