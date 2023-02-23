@@ -19,11 +19,6 @@ setup(
     ],
     python_requires=">=3.6",
     install_requires=requires,
-    entrypoints={
-        'console_scripts': [
-            'remote = remote.main:main'
-        ]
-    },
     long_description=open('README.md').read(),
     long_description_content_type="text/markdown"
 )
