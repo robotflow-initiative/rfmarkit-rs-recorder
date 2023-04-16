@@ -6,6 +6,7 @@ from concurrent.futures import ThreadPoolExecutor
 from typing import List, Dict, Callable
 
 import cv2
+
 cv2.setNumThreads(0)
 import numpy as np
 import tqdm
@@ -29,7 +30,7 @@ class LocalRecordSeq(RealsenseSystemModel):
 
     def insert_meta_data(self, idx, ts, sys_ts, frame_counter):
         self.metadata[idx].append({
-            "ts": ts,
+            "dev_ts": ts,
             "sys_ts": sys_ts,
             "frame_counter": frame_counter
         })
@@ -46,7 +47,6 @@ class LocalRecordSeq(RealsenseSystemModel):
 
         with open(config_save_path, 'w') as f:
             json.dump({"realsense": {"system": self.options.get_dict(), "cameras": list(map(lambda x: x.get_dict(), self.camera_options))}}, f, indent=4)
-
 
     def app(self):
 
@@ -96,7 +96,7 @@ class LocalRecordSeq(RealsenseSystemModel):
                     toc = time.time()
 
                     if color_image is not None:
-                        save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.bmp'), color_image)
+                        save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.bmp'), color_image)
                         # i5 12400K save jpg at 17 fps (load 60%), write to PM9A1 at 200 - 500MB/s, memory consumption 1GB/min percamera
                         # i5 12400K save bmp at 20 fps, but write at 1.0GB/s, memory consumption 0GB/min per camera
 
@@ -104,7 +104,7 @@ class LocalRecordSeq(RealsenseSystemModel):
                         # cv2.imwrite(osp.join(cam.color_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.bmp'), color_image)
 
                     if depth_image is not None:
-                        save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.npy'), depth_image)
+                        save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.npy'), depth_image)
                         # save_workers.submit(lambda: cv2.imwrite(osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0]))
 
                         # np.save(osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.npy'), depth_image)
@@ -115,7 +115,7 @@ class LocalRecordSeq(RealsenseSystemModel):
 
                     if self.options.interactive and not self.options.use_bag:
                         if color_image is not None and depth_image is not None:
-                            mix = cv2.addWeighted(color_image[...,0:3], 0.5, cv2.resize(depth_image, (color_image.shape[1], color_image.shape[0])), 0.5, 0)
+                            mix = cv2.addWeighted(color_image[..., 0:3], 0.5, cv2.resize(depth_image, (color_image.shape[1], color_image.shape[0])), 0.5, 0)
                         elif color_image is not None and depth_image is None:
                             mix = color_image
                         elif color_image is None and depth_image is not None:
@@ -139,10 +139,10 @@ class LocalRecordSeq(RealsenseSystemModel):
                     self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter)
                     if frame_counter > 0:
                         if color_image is not None:
-                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.bmp'), color_image)
+                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.bmp'), color_image)
 
                         if depth_image is not None:
-                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.npy'), depth_image)
+                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.npy'), depth_image)
 
                         progress_bars[idx].set_description(f'SN={cam.option.sn}, FrameCounter={frame_counter}')
                         progress_bars[idx].update(1)
@@ -170,6 +170,7 @@ def main(args):
 
     sys.app()
 
+
 def entry_point(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./realsense_config.yaml')
@@ -177,6 +178,8 @@ def entry_point(argv):
     args = parser.parse_args(argv)
     main(args)
 
+
 if __name__ == '__main__':
     import sys
-    entry_point(sys.argv)
+
+    entry_point(sys.argv[1:])

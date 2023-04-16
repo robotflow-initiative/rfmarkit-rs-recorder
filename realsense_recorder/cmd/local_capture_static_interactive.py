@@ -17,6 +17,7 @@ from realsense_recorder.common import (
     get_datetime_tag
 )
 
+
 class LocalCaptureStaticInteractive(RealsenseSystemModel):
     def __init__(self,
                  system_cfg: RealsenseSystemCfg,
@@ -75,7 +76,7 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
                 for idx, cam in enumerate(self.cameras):
 
                     self.console.print(f"capturing from camera {idx}")
-                    color_image, depth_image, ts, sys_ts, frame_counter = cam.get_frames()
+                    color_image, depth_image, _, sys_ts, frame_counter = cam.get_frames()
 
                     if color_image is not None:
                         cv2.imwrite(osp.join(cam.color_save_path, f'{n_frames}.jpg'), color_image)
@@ -109,7 +110,6 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
 
 
 def main(args):
-
     callbacks = {
         CALLBACKS.tag_cb: (lambda: get_datetime_tag()) if args.tag is None else (lambda: args.tag),
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
@@ -120,6 +120,7 @@ def main(args):
 
     sys.app()
 
+
 def entry_point(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', type=str, default='./realsense_config.yaml')
@@ -127,6 +128,8 @@ def entry_point(argv):
     args = parser.parse_args(argv)
     main(args)
 
+
 if __name__ == '__main__':
     import sys
-    entry_point(sys.argv)
+
+    entry_point(sys.argv[1:])

@@ -12,10 +12,10 @@ import rich.progress_bar
 import yaml
 
 from .config import (
-    CALLBACKS, 
-    get_device_by_cfg, 
-    RealsenseSystemCfg, 
-    new_camera_config_by_product_id, 
+    CALLBACKS,
+    get_device_by_cfg,
+    RealsenseSystemCfg,
+    new_camera_config_by_product_id,
     RealsenseCameraCfg,
     new_system_config,
 )
@@ -24,7 +24,6 @@ from .utils import (
     get_datetime_tag,
     enumerate_devices_that_supports_advanced_mode,
 )
-
 
 
 class RealsenseCameraModel:
@@ -162,39 +161,40 @@ class RealsenseCameraModel:
         if clean:
             self.frame_queue = None
 
-    def _get_global_timestamp(self, frames):
+    @staticmethod
+    def get_timestamp(frames):
         # https://github.com/IntelRealSense/librealsense/issues/5612
-        backend_t = frames.get_frame_metadata(rs.frame_metadata_value.backend_timestamp)
+        t = {'global_t': None, 'backend_t': frames.get_frame_metadata(rs.frame_metadata_value.backend_timestamp), 'sensor_t': None, 'frame_t': None}
+
         try:
-            senseor_t = frames.get_frame_metadata(rs.frame_metadata_value.sensor_timestamp)
-            frame_t = frames.get_frame_metadata(rs.frame_metadata_value.frame_timestamp)
-            global_t = backend_t - (frame_t - senseor_t)
+            t['sensor_t'] = frames.get_frame_metadata(rs.frame_metadata_value.sensor_timestamp)
+            t['frame_t'] = frames.get_frame_metadata(rs.frame_metadata_value.frame_timestamp)
+            t['global_t'] = t['backend_t'] - (t['frame_t'] - t['sensor_t'])
         except RuntimeError as e:
             # Fallback to backend_t
-            global_t = backend_t
-        return global_t
+            t['global_t'] = t['backend_t']
+        return t
 
-    def get_frames(self, timeout_ms=5000) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], float, float, int]:
+    def get_frames(self, timeout_ms=5000) -> Tuple[Optional[np.ndarray], Optional[np.ndarray], Dict[str, float], float, int]:
         if self.use_bag:
             self.frame_queue.wait_for_frame()
-            ts = time.time()
-            return None, None, -1, ts, -1
+            return None, None, {}, time.time(), -1
         else:
             if self.frame_queue is not None:
                 ret, frames = self.frame_queue.try_wait_for_frame(timeout_ms=timeout_ms)
                 if not ret:
-                    return None, None, -1, time.time(), -1
+                    return None, None, {}, time.time(), -1
                 else:
                     frames = rs.composite_frame(frames)
             else:
                 ret, frames = self.pipeline.try_wait_for_frames(timeout_ms=timeout_ms)
                 if not ret:
-                    return None, None, -1, time.time(), -1
+                    return None, None, {}, time.time(), -1
                 else:
                     pass
 
             frame_counter = frames.get_frame_metadata(rs.frame_metadata_value.frame_counter)
-            ts = self._get_global_timestamp(frames)
+            ts = self.get_timestamp(frames)
             sys_ts = time.time()
 
             try:
