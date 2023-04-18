@@ -86,5 +86,11 @@ python -m realsense_recorder configure
 To launch a remote record station that supports REST API
 
 ```shell
-python -m realsense_recorder run --app=remote_record_seq
+python -m realsense_recorder serve
+```
+ 
+To run calibration
+
+```shell
+python -m realsense_recorder calibrate
 ```

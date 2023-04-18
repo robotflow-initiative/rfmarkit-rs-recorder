@@ -164,11 +164,11 @@ class RealsenseCameraModel:
     @staticmethod
     def get_timestamp(frames):
         # https://github.com/IntelRealSense/librealsense/issues/5612
-        t = {'global_t': None, 'backend_t': frames.get_frame_metadata(rs.frame_metadata_value.backend_timestamp), 'sensor_t': None, 'frame_t': None}
+        t = {'global_t': None, 'backend_t': frames.get_frame_metadata(rs.frame_metadata_value.backend_timestamp) / 1000, 'sensor_t': None, 'frame_t': None}
 
         try:
-            t['sensor_t'] = frames.get_frame_metadata(rs.frame_metadata_value.sensor_timestamp)
-            t['frame_t'] = frames.get_frame_metadata(rs.frame_metadata_value.frame_timestamp)
+            t['sensor_t'] = frames.get_frame_metadata(rs.frame_metadata_value.sensor_timestamp) / 1000
+            t['frame_t'] = frames.get_frame_metadata(rs.frame_metadata_value.frame_timestamp) / 1000
             t['global_t'] = t['backend_t'] - (t['frame_t'] - t['sensor_t'])
         except RuntimeError as e:
             # Fallback to backend_t
@@ -279,18 +279,20 @@ class RealsenseSystemModel:
     def open(self):
         for cam in self.cameras:
             cam.open()
+            time.sleep(0.05)
+        time.sleep(0.1)
 
     def close(self):
         for cam in self.cameras:
             cam.close()
 
-    def start(self, interval_ms: int = 0):
+    def start(self, interval_ms: int = 10):
         num_of_cameras = len(self.cameras)
         ret = []
         with ThreadPoolExecutor(max_workers=num_of_cameras) as executor:
             for idx, cam in enumerate(self.cameras):
                 ret.append(executor.submit(lambda: cam.start(delay_ms=interval_ms * (num_of_cameras - idx))))
-
+            executor.shutdown(wait=True)
         list(map(lambda x: x.result(), ret))
         time.sleep(0.1)
 

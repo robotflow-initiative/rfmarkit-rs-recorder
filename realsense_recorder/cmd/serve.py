@@ -44,11 +44,12 @@ class RemoteRecordSeq(RealsenseSystemModel):
         super().__init__(system_cfg, camera_cfgs, callbacks)
         self.metadata: Dict[Dict] = {cam.friendly_name: [] for cam in self.cameras}
 
-    def insert_meta_data(self, idx, ts, sys_ts, frame_counter):
+    def insert_meta_data(self, idx, ts, sys_ts, frame_counter, frame_basename):
         self.metadata[idx].append({
             "dev_ts": ts,
             "sys_ts": sys_ts,
-            "frame_counter": frame_counter
+            "frame_counter": frame_counter,
+            "frame_basename": frame_basename
         })
 
     def save_meta_data(self):
@@ -105,11 +106,13 @@ class RemoteRecordSeq(RealsenseSystemModel):
                 for idx, cam in enumerate(self.cameras):
                     tic = time.time()
                     color_image, depth_image, ts, sys_ts, frame_counter = cam.get_frames()
-                    self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter)
+                    frame_basename = '{:07d}_{}_{}'.format(frame_counter, ts["backend_t"], sys_ts)
+                    self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter, frame_basename)
+
                     toc = time.time()
 
                     if color_image is not None:
-                        save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.bmp'), color_image)
+                        save_workers.submit(save_color_frame, osp.join(cam.color_save_path, frame_basename + '.bmp'), color_image)
                         # i5 12400K save jpg at 17 fps (load 60%), write to PM9A1 at 200 - 500MB/s, memory consumption 1GB/min percamera
                         # i5 12400K save bmp at 20 fps, but write at 1.0GB/s, memory consumption 0GB/min per camera
 
@@ -117,7 +120,7 @@ class RemoteRecordSeq(RealsenseSystemModel):
                         # cv2.imwrite(osp.join(cam.color_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.bmp'), color_image)
 
                     if depth_image is not None:
-                        save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.npy'), depth_image)
+                        save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, frame_basename + '.npy'), depth_image)
                         # save_workers.submit(lambda: cv2.imwrite(osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.png'), depth_image, [cv2.IMWRITE_PNG_COMPRESSION, 0]))
 
                         # np.save(osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts}_{sys_ts}.npy'), depth_image)
@@ -152,13 +155,14 @@ class RemoteRecordSeq(RealsenseSystemModel):
                 self.console.log(f"saving last frames of camera {cam.option.sn}")
                 while True:
                     color_image, depth_image, ts, sys_ts, frame_counter = cam.get_frames(timeout_ms=50)
-                    self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter)
                     if frame_counter > 0:
+                        self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter, frame_basename)
+                        frame_basename = '{:07d}_{}_{}'.format(frame_counter, ts["backend_t"], sys_ts)
                         if color_image is not None:
-                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.bmp'), color_image)
+                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, frame_basename+'.bmp'), color_image)
 
                         if depth_image is not None:
-                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, f'{cam.n_frames}_{ts["global_t"]}_{sys_ts}.npy'), depth_image)
+                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, frame_basename+'.npy'), depth_image)
 
                         progress_bars[idx].set_description(f'SN={cam.option.sn}, FrameCounter={frame_counter}')
                         progress_bars[idx].update(1)

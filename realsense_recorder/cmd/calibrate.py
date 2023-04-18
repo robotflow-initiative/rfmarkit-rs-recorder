@@ -3,6 +3,11 @@ import json
 import os.path as osp
 import time
 from typing import List, Dict, Callable
+import glob
+import logging
+import os
+import shutil
+import subprocess
 
 import cv2
 from rich.progress import track
@@ -16,6 +21,85 @@ from realsense_recorder.common import (
     CALLBACKS,
     get_datetime_tag
 )
+
+from typing import Optional, Dict, Tuple
+
+CONFIG_DOCKER_IMAGE = "davidliyutong/multical-docker"
+CONFIG_BOARD_YAML = """
+common:
+  _type_: 'charuco'
+  size: [10, 10]
+  aruco_dict: '5X5_1000'
+  square_length: 0.040
+  marker_length: 0.032
+  min_rows: 3
+  min_points: 9
+boards:
+  charuco_10x10_0:
+    aruco_offset: 0
+  charuco_10x10_1:
+    aruco_offset: 50
+  charuco_10x10_2:
+    aruco_offset: 100
+  charuco_10x10_3:
+    aruco_offset: 150
+  charuco_10x10_4:
+    aruco_offset: 200
+aruco_params:
+  adaptiveThreshWinSizeMax: 200
+  adaptiveThreshWinSizeStep: 50
+"""
+
+def run_multical_with_docker(tagged_path: str) -> Tuple[Optional[Dict], Optional[Exception]]:
+    _logger = logging.getLogger('run_multical_with_docker')
+    _logger.debug(f"run multical with image {CONFIG_DOCKER_IMAGE}")
+
+    if not osp.exists(tagged_path):
+        return None, FileNotFoundError(f"file {tagged_path} does not exist")
+
+    cameras_name_list = list(
+        filter(lambda x: os.path.isdir(osp.join(tagged_path, x)),
+               os.listdir(tagged_path)
+               )
+    )  # ["rxx", "ryy", "rzz"]
+
+    if len(cameras_name_list) <= 0:
+        return None, FileNotFoundError(f"no camera found in {tagged_path}")
+
+    _logger.debug(f"found {len(cameras_name_list)} cameras")
+    for camera_name in cameras_name_list:
+        frame_filenames = glob.glob(osp.join(tagged_path, camera_name, "color", "*"))
+        if len(frame_filenames) <= 0:
+            _logger.warning(f"no frame found in {camera_name}/color, assuming they are copied to upper directory")
+            continue
+        for frame_name in frame_filenames:
+            shutil.copy(frame_name, osp.join(tagged_path, camera_name))
+
+    _logger.debug(f"write board.yaml")
+    with open(osp.join(tagged_path, "boards.yaml"), "w") as f:
+        f.write(CONFIG_BOARD_YAML)
+
+    _logger.debug("Add docker volume")
+    with open(osp.join(tagged_path, "multical.sh"), 'w') as f:
+        f.write(f"multical calibrate --cameras {' '.join(cameras_name_list)}")
+
+    _logger.debug("launch multical")
+    p = subprocess.Popen(f"docker run --rm -v {osp.abspath(tagged_path)}:/input {CONFIG_DOCKER_IMAGE}", shell=True)
+    try:
+        p.wait(timeout=60)  # should have finished in 30 seconds
+    except subprocess.TimeoutExpired as _:
+        pass
+
+    if osp.exists(osp.join(tagged_path, "calibration.json")):
+        with open(osp.join(tagged_path, "calibration.json"), 'r') as f:
+            try:
+                res = json.load(f)
+                return res, None
+            except Exception as err:
+                return None, err
+    else:
+        return None, FileNotFoundError(f"calibration.json not found in {tagged_path}")
+
 
 
 class LocalCaptureStaticInteractive(RealsenseSystemModel):
@@ -108,10 +192,11 @@ class LocalCaptureStaticInteractive(RealsenseSystemModel):
             self.close()
             cv2.destroyAllWindows()
 
+            run_multical_with_docker(self.options.base_dir)
 
 def main(args):
     callbacks = {
-        CALLBACKS.tag_cb: (lambda: get_datetime_tag()) if args.tag is None else (lambda: args.tag),
+        CALLBACKS.tag_cb: (lambda: 'cali_' + get_datetime_tag()) if args.tag is None else (lambda: args.tag),
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
         CALLBACKS.camera_friendly_name_cb: lambda cam_cfg, _: "r" + cam_cfg.sn[-2:]
     }
