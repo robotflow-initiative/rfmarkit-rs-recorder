@@ -93,6 +93,19 @@ def sync_cameras(base_dir: str,
     synced_filenames = {
         cam_id: filename_map[cam_id][closest_index_map[cam_id][head:tail]] for cam_id in cam_ids
     }
+    synced_timestamps = np.mean(
+        np.concatenate(
+            [
+                np.expand_dims(
+                    timestamp_map[cam_id][closest_index_map[cam_id][head:tail]],
+                    axis=1
+                ) for cam_id in cam_ids
+            ],
+            axis=1
+        ),
+        axis=1
+    )
+
     num_selected_frames = sum([len(v) for k, v in synced_filenames.items()])
     num_dropped_frames = sum([len(v) for k, v in timestamp_map.items()]) - num_selected_frames
     sequence_length = tail - head
@@ -112,14 +125,16 @@ def sync_cameras(base_dir: str,
         },
         'sequence_view': [
             {
-                cam_id: {
-                    'color': synced_filenames[cam_id][i] + '.jpeg',
-                    'depth': synced_filenames[cam_id][i] + '.npz'
-                } for cam_id in cam_ids
+                'path': {
+                    cam_id: {
+                        'color': synced_filenames[cam_id][i] + '.jpeg',
+                        'depth': synced_filenames[cam_id][i] + '.npz'
+                    } for cam_id in cam_ids
+                },
+                'timestamp': synced_timestamps[i]
             }
             for i in range(sequence_length)
-        ]
-
+        ],
     }
     with open(osp.join(base_dir, 'selected_frames.json'), 'w') as f:
         json.dump(selected_frames_dict, f, indent=4)
