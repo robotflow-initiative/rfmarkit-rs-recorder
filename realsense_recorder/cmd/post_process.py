@@ -9,8 +9,11 @@ from realsense_recorder.io import compress_record, sync_cameras
 
 
 def worker(base_dir: str):
-    compress_record(base_dir)
-    sync_cameras(base_dir)
+    try:
+        compress_record(base_dir)
+        sync_cameras(base_dir)
+    except Exception as e:
+        print(e)
 
 
 def main(args):
@@ -20,7 +23,7 @@ def main(args):
 
 def entry_point(argv):
     parser = argparse.ArgumentParser(description='Recorder')
-    parser.add_argument('--base_dir', type=str, help='Base directory', default='')
+    parser.add_argument('--base_dir', type=str, help='Base directory', required=True)
     args = parser.parse_args(argv)
     main(args)
 

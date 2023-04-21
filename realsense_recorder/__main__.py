@@ -14,5 +14,7 @@ elif args[0] == "calibrate":
     exit(cmd.calibrate(args[1:]))
 elif args[0] == "serve":
     exit(cmd.serve(args[1:]))
+elif args[0] == "post_process":
+    exit(cmd.post_process(args[1:]))
 else:
     print("Unknown command: {}".format(args[0]))

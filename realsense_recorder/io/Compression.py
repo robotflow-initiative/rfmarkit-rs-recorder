@@ -52,7 +52,7 @@ def _compress_depth_folder(input_folder, n_prefetch):
         os.remove(f)
 
 
-def compress_record(input_recording: str, n_prefetch=16, console=None):
+def compress_record(input_recording: str, n_prefetch: int=16, max_workers: int=4, console=None):
     console = Console() if console is None else console
     console.log(f"input recording: {input_recording}")
 
@@ -73,12 +73,12 @@ def compress_record(input_recording: str, n_prefetch=16, console=None):
         osp.join(input_recording, camera_folder, 'depth') for camera_folder in camera_folders
     ]
 
-    pool_1 = ProcessPoolExecutor(max_workers=4)
+    pool_1 = ProcessPoolExecutor(max_workers=max_workers)
     for _input_folder in folder_compression_color:
         console.log(f"compressing color {_input_folder}")
         pool_1.submit(_compress_color_folder, _input_folder, n_prefetch)
 
-    pool_2 = ProcessPoolExecutor(max_workers=4)
+    pool_2 = ProcessPoolExecutor(max_workers=max_workers)
     for _input_folder in folder_compression_depth:
         console.log(f"Compressing depth {_input_folder}")
         pool_2.submit(_compress_depth_folder, _input_folder, n_prefetch)

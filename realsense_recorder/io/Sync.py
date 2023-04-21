@@ -1,4 +1,5 @@
 import json
+import logging
 from os import path as osp
 
 import numpy as np
@@ -16,7 +17,11 @@ def query_closest_values(query: np.ndarray, source: np.ndarray) -> Tuple[np.ndar
 def sync_cameras(base_dir: str,
                  drop_first_n_frames: int = 30,
                  sync_method: str = 'backend_t'):
-    calibration = json.load(open(osp.join(base_dir, 'calibration.json')))
+    try:
+        calibration = json.load(open(osp.join(base_dir, 'calibration.json')))
+    except Exception as e:
+        logging.warning(e)
+        calibration = None
     recording_metadata = json.load(open(osp.join(base_dir, 'metadata_all.json')))
     cam_ids = list(recording_metadata['metadata'].keys())
 
@@ -51,8 +56,12 @@ def sync_cameras(base_dir: str,
         ) for cam_id in cam_ids
     }
 
-    master_cam_id = list(filter(lambda x: 'to' not in x, calibration['camera_poses'].keys()))[0]
-    slave_cam_ids = list(filter(lambda x: x != master_cam_id, calibration['cameras'].keys()))
+    if calibration is not None:
+        master_cam_id = list(filter(lambda x: 'to' not in x, calibration['camera_poses'].keys()))[0]
+        slave_cam_ids = list(filter(lambda x: x != master_cam_id, calibration['cameras'].keys()))
+    else:
+        master_cam_id = cam_ids[0]
+        slave_cam_ids = cam_ids[1:]
 
     closest_value_map = {
         master_cam_id: timestamp_map[master_cam_id]

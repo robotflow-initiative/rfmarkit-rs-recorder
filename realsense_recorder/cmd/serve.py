@@ -30,7 +30,7 @@ from realsense_recorder.common import (
     enumerate_devices_that_supports_advanced_mode,
 )
 
-from .post_processing import worker as post_processing_worker
+from .post_process import worker as post_processing_worker
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)

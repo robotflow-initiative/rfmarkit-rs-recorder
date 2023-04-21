@@ -101,3 +101,9 @@ To run calibration
 ```shell
 python -m realsense_recorder calibrate
 ```
+
+To run post-processing
+
+```shell
+python -m realsense_recorder post_process --base_dir path/to/recording
+```
