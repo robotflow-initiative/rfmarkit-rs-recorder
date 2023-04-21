@@ -4,10 +4,12 @@ import logging
 import multiprocessing as mp
 import os
 import os.path as osp
+import shutil
 import signal
 import time
 from concurrent.futures import ThreadPoolExecutor
 from typing import Callable, Dict, List, Optional
+import threading
 
 import cv2
 import numpy as np
@@ -16,6 +18,7 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
+import pyrealsense2 as rs
 
 from realsense_recorder.common import (
     CALLBACKS,
@@ -23,8 +26,11 @@ from realsense_recorder.common import (
     RealsenseSystemModel,
     RealsenseSystemCfg,
     RealsenseCameraCfg,
-    get_datetime_tag
+    get_datetime_tag,
+    enumerate_devices_that_supports_advanced_mode,
 )
+
+from .post_processing import worker as post_processing_worker
 
 app = FastAPI()
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +39,7 @@ STOP_EV: mp.Event = mp.Event()
 FINISH_EV: mp.Event = mp.Event()
 READY_EV: mp.Event = mp.Event()
 CAPTURE_PROCS: List[mp.Process] = []
+POST_PROCESSING_QUEUE: Optional[mp.Queue] = None
 ARGS: Optional[argparse.Namespace] = None
 
 
@@ -159,10 +166,10 @@ class RemoteRecordSeq(RealsenseSystemModel):
                         self.insert_meta_data(cam.friendly_name, ts, sys_ts, frame_counter, frame_basename)
                         frame_basename = '{:07d}_{}_{}'.format(frame_counter, ts["backend_t"], sys_ts)
                         if color_image is not None:
-                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, frame_basename+'.bmp'), color_image)
+                            save_workers.submit(save_color_frame, osp.join(cam.color_save_path, frame_basename + '.bmp'), color_image)
 
                         if depth_image is not None:
-                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, frame_basename+'.npy'), depth_image)
+                            save_workers.submit(save_depth_frame, osp.join(cam.depth_save_path, frame_basename + '.npy'), depth_image)
 
                         progress_bars[idx].set_description(f'SN={cam.option.sn}, FrameCounter={frame_counter}')
                         progress_bars[idx].update(1)
@@ -195,7 +202,8 @@ def capture_frames(stop_ev: mp.Event,
                    finish_ev: mp.Event,
                    ready_ev: mp.Event,
                    config: str,
-                   tag: str):
+                   tag: str,
+                   post_processing_queue: mp.Queue = None):
     callbacks = {
         CALLBACKS.tag_cb: lambda: tag,
         CALLBACKS.save_path_cb: lambda cam_cfg, sys_cfg: osp.join(sys_cfg.base_dir, "r" + cam_cfg.sn[-2:]),
@@ -204,7 +212,14 @@ def capture_frames(stop_ev: mp.Event,
 
     sys = new_realsense_camera_system_from_yaml_file(RemoteRecordSeq, config, callbacks)
 
-    sys.app(stop_ev, finish_ev, ready_ev)
+    try:
+        sys.app(stop_ev, finish_ev, ready_ev)
+    except AttributeError as e:
+        logging.error(f"capture_frames failed: {e}")
+
+    if post_processing_queue is not None:
+        logging.info(f"adding {sys.options.base_dir} to post processing queue")
+        post_processing_queue.put(sys.options.base_dir)
 
 
 @app.get("/")
@@ -231,7 +246,7 @@ def ready():
 
 @app.post("/v1/start")
 def start_process(tag: str = None):
-    global CAPTURE_PROCS, STOP_EV, FINISH_EV, READY_EV, ARGS
+    global CAPTURE_PROCS, STOP_EV, FINISH_EV, READY_EV, ARGS, POST_PROCESSING_QUEUE
 
     # Wait until last capture ends
     if len(CAPTURE_PROCS) > 0:
@@ -264,7 +279,8 @@ def start_process(tag: str = None):
                                               FINISH_EV,
                                               READY_EV,
                                               ARGS.config,
-                                              tag))]
+                                              tag,
+                                              POST_PROCESSING_QUEUE))]
             DELAY_S = 2  # Magic delay duration to avoid U3V communication error
             [(proc.start(), time.sleep(DELAY_S
                                        )) for proc in CAPTURE_PROCS]
@@ -284,6 +300,18 @@ def stop_process():
         return make_response(status_code=500, msg="NOT RUNNING")
 
 
+@app.post("/v1/reset")
+def reset_camera():
+    global CAPTURE_PROCS, STOP_EV
+    if len(CAPTURE_PROCS) > 0 and any([proc.is_alive() for proc in CAPTURE_PROCS]):
+        return make_response(status_code=500, msg="RUNNING")
+    else:
+        for dev in enumerate_devices_that_supports_advanced_mode(rs.context()):
+            dev.hardware_reset()
+        time.sleep(3)
+        return make_response(status_code=200, msg="RESET OK")
+
+
 @app.post("/v1/kill")
 def kill_process():
     global CAPTURE_PROCS, STOP_EV, FINISH_EV
@@ -301,23 +329,57 @@ def kill_process():
         return make_response(status_code=500, msg="NOT RUNNING")
 
 
+def post_processing_thread():
+    global POST_PROCESSING_QUEUE, ARGS
+    logging.info("post processing thread started")
+    while True:
+        if not POST_PROCESSING_QUEUE.empty():
+            base_dir = POST_PROCESSING_QUEUE.get()
+            if ARGS.calibration is not None:
+                try:
+                    _calibration_file_name = "calibration.json"
+                    shutil.copy(osp.join(ARGS.calibration, _calibration_file_name), base_dir)
+                    logging.info(f"copy calibration file from {osp.join(ARGS.calibration, _calibration_file_name)} to {base_dir}")
+                except Exception as e:
+                    logging.error(f"copy calibration file failed: {e}")
+                try:
+                    post_processing_worker(base_dir)
+                except Exception as e:
+                    logging.error(f"post processing failed: {e}")
+                # p = mp.Process(target=post_processing_worker, args=(sys.options.base_dir,))
+        else:
+            time.sleep(1)
+
+
 def main(args: argparse.Namespace):
-    global ARGS
+    global ARGS, POST_PROCESSING_QUEUE
+    POST_PROCESSING_QUEUE = mp.Queue()
     ARGS = args
     # Prepare system
     logging.info('the server listens at port {}'.format(args.port))
 
+    if not osp.exists(args.config):
+        logging.error(f"config file {args.config} does not exist")
+        exit(1)
+
+    if args.calibration is not None and not osp.exists(args.calibration):
+        logging.error(f"calibration file {args.calibration} does not exist")
+        exit(1)
+
     try:
+        t = threading.Thread(target=post_processing_thread)
+        t.start()
         uvicorn.run(app=app, port=args.port)
     except KeyboardInterrupt:
         logging.info(f"main() got KeyboardInterrupt")
-        exit(1)
+        os._exit(1)
 
 
 def entry_point(argv):
     parser = argparse.ArgumentParser(description='Recorder')
-    parser.add_argument('--app', type=str, help='', default='')
+    # parser.add_argument('--app', type=str, help='', default='')
     parser.add_argument('--config', type=str, help='The realsense system configuration', default='./realsense_config.yaml')
+    parser.add_argument('--calibration', type=str, help='The realsense system calibration', default=None)
     parser.add_argument('--port', type=int, help="Port to listen", default=5050)
     parser.add_argument('--debug', action='store_true', help='Toggle Debug mode')
     args = parser.parse_args(argv)

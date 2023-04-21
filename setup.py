@@ -6,7 +6,7 @@ requires = open("./requirements.txt", "r").readlines() if os.path.exists("./requ
 
 setup(
     name="markit-realsense-recorder",
-    version="1.7.0",
+    version="1.8.0",
     author="davidliyutong",
     author_email="davidliyutong@sjtu.edu.cn",
     description="Realsense remote recorder",
@@ -14,6 +14,7 @@ setup(
         "realsense_recorder",
         "realsense_recorder/cmd",
         "realsense_recorder/common",
+        "realsense_recorder/filters",
         "realsense_recorder/io",
         "realsense_recorder/scripts",
     ],

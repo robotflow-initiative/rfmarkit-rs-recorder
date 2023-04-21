@@ -289,12 +289,14 @@ class RealsenseSystemModel:
     def start(self, interval_ms: int = 10):
         num_of_cameras = len(self.cameras)
         ret = []
-        with ThreadPoolExecutor(max_workers=num_of_cameras) as executor:
-            for idx, cam in enumerate(self.cameras):
-                ret.append(executor.submit(lambda: cam.start(delay_ms=interval_ms * (num_of_cameras - idx))))
-            executor.shutdown(wait=True)
-        list(map(lambda x: x.result(), ret))
-        time.sleep(0.1)
+        # with ThreadPoolExecutor(max_workers=num_of_cameras) as executor:
+        #     for idx, cam in enumerate(self.cameras):
+        #         ret.append(executor.submit(lambda: cam.start(delay_ms=interval_ms * (num_of_cameras - idx))))
+        #     executor.shutdown(wait=True)
+        # list(map(lambda x: x.result(), ret))
+        # time.sleep(0.1)
+        for idx, cam in enumerate(self.cameras):
+            cam.start()
 
     def stop(self, interval_ms: int = 0):
         num_of_cameras = len(self.cameras)

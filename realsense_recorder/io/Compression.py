@@ -45,7 +45,7 @@ def _compress_depth_folder(input_folder, n_prefetch):
         while not reader.eof:
             frame, meta, _ = reader.next()
             frame_basename_without_ext = osp.splitext(osp.basename(meta['basename']))[0]
-            np.savez_compressed(osp.join(input_folder, frame_basename_without_ext + ".npz"), frame)
+            np.savez_compressed(osp.join(input_folder, frame_basename_without_ext + ".npz"), depth=frame)
             files_to_remove.append(osp.join(input_folder, frame_basename_without_ext + ".npy"))
             pbar.update()
     for f in files_to_remove:

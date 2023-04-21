@@ -1,7 +1,9 @@
 import datetime
 from typing import Dict, Any, List
 
+import numpy as np
 import pyrealsense2 as rs
+import cv2
 
 from realsense_recorder.common import new_camera_config_by_device, new_system_config
 
@@ -68,3 +70,34 @@ def configure_realsense_system_from_keyboard() -> Dict[str, Dict[str, Any]]:
 
 def get_datetime_tag() -> str:
     return datetime.datetime.now().strftime("%Y-%m-%d_%H%M%S")
+
+def rvec_tvec_to_matrix(rvec: np.ndarray=None, tvec: np.ndarray=None) -> np.ndarray:
+    """
+    Convert rotation vector and translation vector to transformation matrix
+    Args:
+        rvec:  rotation vector
+        tvec:  translation vector
+
+    Returns:
+        transformation matrix
+    """
+    R, _ = cv2.Rodrigues(rvec) if rvec is not None else (np.eye(3), None)
+    T = np.eye(4)
+    T[:3, :3] = R
+    T[:3, 3] = tvec if tvec is not None else np.zeros(3)
+    return T
+
+def R_T_to_matrix(R: np.ndarray, T:np.ndarray) -> np.ndarray:
+    """
+    Convert R matrix and T matrix to transformation matrix
+    Args:
+        R:  rotation
+        T:  translation
+
+    Returns:
+        transformation matrix
+    """
+    res = np.eye(4)
+    res[:3, :3] = R if R is not None else np.eye(3)
+    res[:3, 3] = T if T is not None else np.zeros(3)
+    return res
