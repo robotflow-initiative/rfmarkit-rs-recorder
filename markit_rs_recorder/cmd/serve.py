@@ -20,7 +20,7 @@ from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, RedirectResponse
 import pyrealsense2 as rs
 
-from realsense_recorder.common import (
+from markit_rs_recorder.common import (
     CALLBACKS,
     new_realsense_camera_system_from_yaml_file,
     RealsenseSystemModel,

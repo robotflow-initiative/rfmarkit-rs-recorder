@@ -1,4 +1,4 @@
-from realsense_recorder.cmd.calibrate import main
+from markit_rs_recorder.cmd.calibrate import main
 
 
 class DefaultArgs:

@@ -1,4 +1,4 @@
-from realsense_recorder.cmd.local_record_seq import main
+from markit_rs_recorder.cmd.local_record_seq import main
 
 
 class DefaultArgs:

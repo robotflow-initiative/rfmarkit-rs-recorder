@@ -1,7 +1,7 @@
 import argparse
 import sys
-import realsense_recorder.scripts as scripts
-import realsense_recorder.cmd as cmd
+import markit_rs_recorder.scripts as scripts
+import markit_rs_recorder.cmd as cmd
 
 parser = argparse.ArgumentParser()
 

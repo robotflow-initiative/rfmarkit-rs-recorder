@@ -5,7 +5,7 @@ import numpy as np
 import pyrealsense2 as rs
 import cv2
 
-from realsense_recorder.common import new_camera_config_by_device, new_system_config
+from markit_rs_recorder.common import new_camera_config_by_device, new_system_config
 
 
 def enumerate_connected_devices(ctx: rs.context):

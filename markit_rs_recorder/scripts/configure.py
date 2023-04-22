@@ -4,7 +4,7 @@ import logging
 import yaml
 from rich.console import Console
 
-from realsense_recorder.common import configure_realsense_system_from_keyboard
+from markit_rs_recorder.common import configure_realsense_system_from_keyboard
 
 
 def main(args: argparse.Namespace):

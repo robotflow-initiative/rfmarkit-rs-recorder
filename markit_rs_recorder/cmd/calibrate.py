@@ -13,7 +13,7 @@ import cv2
 from rich.progress import track
 import numpy as np
 
-from realsense_recorder.common import (
+from markit_rs_recorder.common import (
     RealsenseCameraCfg,
     RealsenseSystemCfg,
     RealsenseSystemModel,

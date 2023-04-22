@@ -9,7 +9,7 @@ from typing import Any
 import cv2
 import numpy as np
 import tqdm
-from realsense_recorder.io import get_directory_reader
+from markit_rs_recorder.io import get_directory_reader
 from rich.console import Console
 
 console = None

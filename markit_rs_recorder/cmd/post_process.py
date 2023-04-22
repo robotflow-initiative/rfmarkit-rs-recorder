@@ -2,7 +2,7 @@ import argparse
 import numpy as np
 from typing import Tuple
 
-from realsense_recorder.io import compress_record, sync_cameras
+from markit_rs_recorder.io import compress_record, sync_cameras
 
 # def detect_fiducials(base_dir: str):
 #     pass
