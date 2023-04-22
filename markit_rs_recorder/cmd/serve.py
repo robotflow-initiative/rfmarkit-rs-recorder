@@ -41,7 +41,7 @@ READY_EV: mp.Event = mp.Event()
 CAPTURE_PROCS: List[mp.Process] = []
 POST_PROCESSING_QUEUE: Optional[mp.Queue] = None
 ARGS: Optional[argparse.Namespace] = None
-
+EXIT_EV: mp.Event = mp.Event()
 
 class RemoteRecordSeq(RealsenseSystemModel):
     def __init__(self,
@@ -329,10 +329,13 @@ def kill_process():
         return make_response(status_code=500, msg="NOT RUNNING")
 
 
-def post_processing_thread():
+def post_processing_thread(exit_ev: mp.Event()):
     global POST_PROCESSING_QUEUE, ARGS
     logging.info("post processing thread started")
     while True:
+        if exit_ev.is_set():
+            logging.info("post processing thread exited")
+            return
         if not POST_PROCESSING_QUEUE.empty():
             base_dir = POST_PROCESSING_QUEUE.get()
             if ARGS.calibration is not None:
@@ -352,9 +355,10 @@ def post_processing_thread():
 
 
 def main(args: argparse.Namespace):
-    global ARGS, POST_PROCESSING_QUEUE
+    global ARGS, POST_PROCESSING_QUEUE, EXIT_EV
     POST_PROCESSING_QUEUE = mp.Queue()
     ARGS = args
+    EXIT_EV.clear()
     # Prepare system
     logging.info('the server listens at port {}'.format(args.port))
 
@@ -366,12 +370,20 @@ def main(args: argparse.Namespace):
         logging.error(f"calibration file {args.calibration} does not exist")
         exit(1)
 
+    thread2 = None
     try:
-        t = threading.Thread(target=post_processing_thread)
-        t.start()
-        uvicorn.run(app=app, port=args.port)
+        thread1 = threading.Thread(target=uvicorn.run, kwargs={'app': app, 'port': args.port, 'host': args.host})
+        thread1.start()
+
+        thread2 = threading.Thread(target=post_processing_thread, args=(EXIT_EV, ))
+        thread2.start()
+        while True:
+            time.sleep(86400)
+
     except KeyboardInterrupt:
-        logging.info(f"main() got KeyboardInterrupt")
+        EXIT_EV.set()
+        logging.info("main() got KeyboardInterrupt")
+        thread2.join() if thread2 is not None else None
         os._exit(1)
 
 
@@ -381,6 +393,7 @@ def entry_point(argv):
     parser.add_argument('--config', type=str, help='The realsense system configuration', default='./realsense_config.yaml')
     parser.add_argument('--calibration', type=str, help='The realsense system calibration', default=None)
     parser.add_argument('--port', type=int, help="Port to listen", default=5050)
+    parser.add_argument('--host', type=str, help="Host to listen", default="0.0.0.0")
     parser.add_argument('--debug', action='store_true', help='Toggle Debug mode')
     args = parser.parse_args(argv)
     main(args)
